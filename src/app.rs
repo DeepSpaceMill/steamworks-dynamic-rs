@@ -157,7 +157,7 @@ impl Apps {
         }
     }
 
-    /// Gets the associated launch parameter if the game is run via steam://run/<appid>/?param1=value1;param2=value2;param3=value3 etc.
+    /// Gets the associated launch parameter if the game is run via `steam://run/<appid>/?param1=value1;param2=value2;param3=value3` etc.
     ///
     /// Parameter names starting with the character '@' are reserved for internal use and will always return an empty string.
     /// Parameter names starting with an underscore '_' are reserved for steam features -- they can be queried by the game, but it is advised that you don't use param names beginning with an underscore for your own features.
@@ -173,7 +173,7 @@ impl Apps {
     }
 }
 
-/// Called after the user executes a steam url with command line or query parameters such as steam://run/<appid>//?param1=value1;param2=value2;param3=value3; while the game is already running.
+/// Called after the user executes a steam url with command line or query parameters such as `steam://run/<appid>/?param1=value1;param2=value2;param3=value3` while the game is already running.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NewUrlLaunchParameters;

@@ -249,13 +249,13 @@ pub struct AuthSessionTicketResponse {
     /// The ticket in question
     pub ticket: AuthTicket,
     /// The result of generating the ticket
-    pub result: SResult<()>,
+    pub result: SteamResult,
 }
 
 impl_callback!(cb: GetAuthSessionTicketResponse_t => AuthSessionTicketResponse {
     Self {
         ticket: AuthTicket(cb.m_hAuthTicket),
-        result: crate::to_steam_result(cb.m_eResult),
+        result: to_steam_result(cb.m_eResult),
     }
 });
 
@@ -287,7 +287,7 @@ fn test_auth_webapi() {
 #[derive(Debug)]
 pub struct TicketForWebApiResponse {
     pub ticket_handle: AuthTicket,
-    pub result: SResult<()>,
+    pub result: SteamResult,
     pub ticket_len: i32,
     pub ticket: Vec<u8>,
 }
@@ -295,7 +295,7 @@ pub struct TicketForWebApiResponse {
 impl_callback!(cb: GetTicketForWebApiResponse_t => TicketForWebApiResponse {
     Self {
         ticket_handle: AuthTicket(cb.m_hAuthTicket),
-        result: crate::to_steam_result(cb.m_eResult),
+        result: to_steam_result(cb.m_eResult),
         ticket_len: cb.m_cubTicket,
         ticket: cb.m_rgubTicket.to_vec(),
     }
@@ -386,12 +386,12 @@ impl_callback!(_cb: SteamServersConnected_t => SteamServersConnected {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SteamServersDisconnected {
     /// The reason we were disconnected from the Steam servers
-    pub reason: SteamError,
+    pub reason: SteamResult,
 }
 
 impl_callback!(cb: SteamServersDisconnected_t => SteamServersDisconnected {
     Self {
-        reason: cb.m_eResult.into(),
+        reason: to_steam_result(cb.m_eResult),
     }
 });
 
@@ -400,19 +400,19 @@ impl_callback!(cb: SteamServersDisconnected_t => SteamServersDisconnected {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SteamServerConnectFailure {
     /// The reason we failed to connect to the Steam servers
-    pub reason: SteamError,
+    pub reason: SteamResult,
     /// Whether we are still retrying the connection.
     pub still_retrying: bool,
 }
 
 impl_callback!(cb: SteamServerConnectFailure_t => SteamServerConnectFailure {
     Self {
-        reason: cb.m_eResult.into(),
+        reason: to_steam_result(cb.m_eResult),
         still_retrying: cb.m_bStillRetrying,
     }
 });
 
-/// Errors from `ValidateAuthTicketResponse`
+/// Errors from [`ValidateAuthTicketResponse`]
 #[derive(Clone, Debug, Error)]
 pub enum AuthSessionValidateError {
     /// The user in question is not connected to steam

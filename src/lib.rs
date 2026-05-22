@@ -63,15 +63,15 @@ mod user;
 mod user_stats;
 mod utils;
 
-pub type SResult<T> = Result<T, SteamError>;
+/// Alias for [`Result<T, SteamError>`](SteamError)
+pub type SteamResult<T = ()> = Result<T, SteamError>;
 
-pub type SIResult<T> = Result<T, SteamAPIInitError>;
-
-pub(crate) fn to_steam_result(result: sys::EResult) -> SResult<()> {
-    if result == sys::EResult::k_EResultOK {
-        Ok(())
-    } else {
-        Err(result.into())
+/// Convert a raw result to a Rust [`Result`] type.
+pub(crate) fn to_steam_result(result: sys::EResult) -> SteamResult {
+    match result {
+        // sys::EResult::k_EResultNone => Ok(()), TODO: I'm not sure if this is considered a success
+        sys::EResult::k_EResultOK => Ok(()),
+        error => Err(error.try_into().unwrap()),
     }
 }
 
@@ -116,7 +116,7 @@ impl Inner {
     /// thread.
     ///
     /// This should be called frequently (e.g. once per a frame)
-    /// in order to reduce the latency between recieving events.
+    /// in order to reduce the latency between receiving events.
     pub fn run_callbacks(&self) {
         self.run_callbacks_raw(|cb_discrim, data| {
             let mut callbacks = self.callbacks.callbacks.lock().unwrap();
@@ -132,10 +132,10 @@ impl Inner {
     /// `callback_handler` is called for every callback invoked.
     ///
     /// This option provides an alternative for handling callbacks that
-    /// can doesn't require the handler to be `Send`, and `'static`.
+    /// don't require the handler to be `Send`, and `'static`.
     ///
     /// This should be called frequently (e.g. once per a frame)
-    /// in order to reduce the latency between recieving events.
+    /// in order to reduce the latency between receiving events.
     pub fn process_callbacks(&self, mut callback_handler: impl FnMut(CallbackResult)) {
         self.run_callbacks_raw(|cb_discrim, data| {
             {
@@ -246,7 +246,7 @@ impl Client {
     /// * The game isn't running on the same user/level as the steam client
     /// * The user doesn't own a license for the game.
     /// * The app ID isn't completely set up.
-    pub fn init() -> SIResult<Client> {
+    pub fn init() -> Result<Client, SteamAPIInitError> {
         static_assert_send::<Client>();
         static_assert_sync::<Client>();
         unsafe {
@@ -287,7 +287,7 @@ impl Client {
     /// * The game isn't running on the same user/level as the steam client
     /// * The user doesn't own a license for the game.
     /// * The app ID isn't completely set up.
-    pub fn init_app<ID: Into<AppId>>(app_id: ID) -> SIResult<Client> {
+    pub fn init_app<ID: Into<AppId>>(app_id: ID) -> Result<Client, SteamAPIInitError> {
         let app_id = app_id.into().0.to_string();
         std::env::set_var("SteamAppId", &app_id);
         std::env::set_var("SteamGameId", app_id);

@@ -128,10 +128,10 @@ pub struct ScreenshotReady {
 }
 
 impl_callback!(cb: ScreenshotReady_t => ScreenshotReady {
-    let local_handle = match cb.m_eResult {
-        sys::EResult::k_EResultOK => Ok(cb.m_hLocal),
-        sys::EResult::k_EResultIOFailure => Err(ScreenshotReadyError::IoFailure),
-        _ => Err(ScreenshotReadyError::Fail),
+    let local_handle = match to_steam_result(cb.m_eResult) {
+        Ok(_) => Ok(cb.m_hLocal),
+        Err(SteamError::IOFailure) => Err(ScreenshotReadyError::IoFailure),
+        Err(_) => Err(ScreenshotReadyError::Fail),
     };
 
     Self { local_handle }

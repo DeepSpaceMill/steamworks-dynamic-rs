@@ -107,7 +107,7 @@ impl Server {
         query_port: u16,
         server_mode: ServerMode,
         version: &str,
-    ) -> SIResult<(Server, Client)> {
+    ) -> Result<(Server, Client), SteamAPIInitError> {
         unsafe {
             let version = CString::new(version).unwrap();
 
@@ -166,7 +166,7 @@ impl Server {
     /// thread.
     ///
     /// This should be called frequently (e.g. once per a frame)
-    /// in order to reduce the latency between recieving events.
+    /// in order to reduce the latency between receiving events.
     pub fn run_callbacks(&self) {
         self.inner.run_callbacks()
     }
@@ -177,10 +177,10 @@ impl Server {
     /// `callback_handler` is called for every callback invoked.
     ///
     /// This option provides an alternative for handling callbacks that
-    /// can doesn't require the handler to be `Send`, and `'static`.
+    /// don't require the handler to be `Send`, and `'static`.
     ///
     /// This should be called frequently (e.g. once per a frame)
-    /// in order to reduce the latency between recieving events.
+    /// in order to reduce the latency between receiving events.
     pub fn process_callbacks(&self, mut callback_handler: impl FnMut(CallbackResult)) {
         self.inner.process_callbacks(&mut callback_handler)
     }
@@ -196,7 +196,7 @@ impl Server {
     /// [`process_callbacks`] instead.
     ///
     /// [`run_callbacks`]: Self::run_callbacks
-    /// [`process_callbacks`]: Self::proceses_callbacks
+    /// [`process_callbacks`]: Self::process_callbacks
     pub fn register_callback<C, F>(&self, f: F) -> CallbackHandle
     where
         C: Callback,

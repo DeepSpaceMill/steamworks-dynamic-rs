@@ -27,7 +27,7 @@ use crate::networking_types::{
     NetConnectionInfo, NetConnectionRealTimeInfo, NetworkingConnectionState, NetworkingIdentity,
     NetworkingMessage, SendFlags,
 };
-use crate::{register_callback, Callback, Inner, SteamError};
+use crate::{register_callback, to_steam_result, Callback, Inner, SteamResult};
 use std::ffi::c_void;
 use std::sync::{Arc, Weak};
 
@@ -91,7 +91,7 @@ impl NetworkingMessages {
         send_type: SendFlags,
         data: &[u8],
         channel: u32,
-    ) -> Result<(), SteamError> {
+    ) -> SteamResult {
         let result = unsafe {
             sys::SteamAPI_ISteamNetworkingMessages_SendMessageToUser(
                 self.net,
@@ -103,11 +103,7 @@ impl NetworkingMessages {
             )
         };
 
-        if result == sys::EResult::k_EResultOK {
-            return Ok(());
-        }
-
-        Err(result.into())
+        to_steam_result(result)
     }
 
     /// Reads the next message that has been sent from another user on the given channel.

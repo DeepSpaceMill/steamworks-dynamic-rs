@@ -4,16 +4,94 @@ use serde::{Deserialize, Serialize};
 use crate::sys;
 use std::{convert::TryFrom, ffi::CStr};
 
-/// Covers errors that can be returned by the steamworks API
-///
-/// Documentation is based on official documentation which doesn't
-/// always explain when an error could be returned or its meaning.
-#[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum SteamError {
-    /// Returned if the steamworks API fails to initialize.
-    #[error("failed to init the steamworks API")]
-    InitFailed,
+/// Link to a page/id on the official Steamworks API Reference. For doc comments
+macro_rules! docs_link {
+    ($page:ident/$id:ident) => {
+        concat!(
+            "_Steamworks API Reference:_ [`",
+            stringify!($id),
+            "`](https://partner.steamgames.com/doc/api/",
+            stringify!($page),
+            "#",
+            stringify!($id),
+            ")"
+        )
+    };
+}
+
+/// Map a SteamError name to its raw binding name. Most are direct mappings, but some aren't.
+macro_rules! map_binding_name {
+    (Generic) => {
+        k_EResultFail
+    };
+    (InvalidProtocolVersion) => {
+        k_EResultInvalidProtocolVer
+    };
+    (InvalidParameter) => {
+        k_EResultInvalidParam
+    };
+    ($variant:ident) => {
+        paste::paste! { [< k_EResult $variant >] }
+    };
+}
+
+/// Implementation of SteamError. Macro is a little bit harder to read but avoids us accidentally missing a variant match
+macro_rules! steam_error {
+    (
+        $(
+            $(
+                #[doc = $doc:expr] // doc comment gets expanded before macro exp, so we match it like this
+            )*
+            #[error($error:expr)]
+            $variant:ident
+        ),*
+    ) => {
+        paste::paste! {
+            /// Covers errors that can be returned by the steamworks API
+            ///
+            /// Note that all [`EResult`](sys::EResult) values are [`SteamError`]s, as for example
+            /// [`k_EResultOK`](sys::EResult::k_EResultOK) is not an error at all.
+            ///
+            /// Documentation is based on official documentation which doesn't
+            /// always explain when an error could be returned or its meaning.
+            #[derive(Copy, Clone, Debug, Error, PartialEq, Eq)]
+            #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+            pub enum SteamError {
+                $(
+                    // Link to official doc, then doc comments
+                    #[doc = concat!("**\"", $error, "\"** (", docs_link!(steam_api/[<k_EResult $variant>]), ")\n\n")]
+                    $(
+                        #[doc = $doc]
+                    )*
+                    #[error($error)]
+                    $variant
+                ),*
+            }
+        }
+
+
+            impl TryFrom<i64> for SteamError {
+                type Error = InvalidSteamError;
+                fn try_from(raw: i64) -> Result<Self, Self::Error> {
+                    use sys::EResult::*;
+                    let ok = match raw {
+                        x if x == sys::EResult::k_EResultOK as i64 => return Err(InvalidSteamError::Ok),
+
+                        $(
+                            x if x == map_binding_name!($variant) as i64 => SteamError::$variant,
+                        )*
+
+                        // Unhandled error, either something undocumented or a new error.
+                        _ => return Err(InvalidSteamError::Unknown(raw)),
+                    };
+
+                    Ok(ok)
+                }
+            }
+    };
+}
+
+steam_error! {
     /// Returned if the steamworks API fails to perform an action
     #[error("a generic failure from the steamworks API")]
     Generic,
@@ -423,423 +501,41 @@ pub enum SteamError {
     #[error("The local data for the offline mode cache is insufficient to login")]
     OfflineAppCacheInvalid,
     #[error("retry the operation later")]
-    TryLater,
+    TryLater
 }
 
-impl From<sys::EResult> for SteamError {
-    fn from(r: sys::EResult) -> Self {
-        match r {
-            sys::EResult::k_EResultOK => panic!("EResult::k_EResultOK isn't an error"),
-            sys::EResult::k_EResultFail => SteamError::Generic,
-            sys::EResult::k_EResultNoConnection => SteamError::NoConnection,
-            sys::EResult::k_EResultInvalidPassword => SteamError::InvalidPassword,
-            sys::EResult::k_EResultLoggedInElsewhere => SteamError::LoggedInElsewhere,
-            sys::EResult::k_EResultInvalidProtocolVer => SteamError::InvalidProtocolVersion,
-            sys::EResult::k_EResultInvalidParam => SteamError::InvalidParameter,
-            sys::EResult::k_EResultFileNotFound => SteamError::FileNotFound,
-            sys::EResult::k_EResultBusy => SteamError::Busy,
-            sys::EResult::k_EResultInvalidState => SteamError::InvalidState,
-            sys::EResult::k_EResultInvalidName => SteamError::InvalidName,
-            sys::EResult::k_EResultInvalidEmail => SteamError::InvalidEmail,
-            sys::EResult::k_EResultDuplicateName => SteamError::DuplicateName,
-            sys::EResult::k_EResultAccessDenied => SteamError::AccessDenied,
-            sys::EResult::k_EResultTimeout => SteamError::Timeout,
-            sys::EResult::k_EResultBanned => SteamError::Banned,
-            sys::EResult::k_EResultAccountNotFound => SteamError::AccountNotFound,
-            sys::EResult::k_EResultInvalidSteamID => SteamError::InvalidSteamID,
-            sys::EResult::k_EResultServiceUnavailable => SteamError::ServiceUnavailable,
-            sys::EResult::k_EResultNotLoggedOn => SteamError::NotLoggedOn,
-            sys::EResult::k_EResultPending => SteamError::Pending,
-            sys::EResult::k_EResultEncryptionFailure => SteamError::EncryptionFailure,
-            sys::EResult::k_EResultInsufficientPrivilege => SteamError::InsufficientPrivilege,
-            sys::EResult::k_EResultLimitExceeded => SteamError::LimitExceeded,
-            sys::EResult::k_EResultRevoked => SteamError::Revoked,
-            sys::EResult::k_EResultExpired => SteamError::Expired,
-            sys::EResult::k_EResultAlreadyRedeemed => SteamError::AlreadyRedeemed,
-            sys::EResult::k_EResultDuplicateRequest => SteamError::DuplicateRequest,
-            sys::EResult::k_EResultAlreadyOwned => SteamError::AlreadyOwned,
-            sys::EResult::k_EResultIPNotFound => SteamError::IPNotFound,
-            sys::EResult::k_EResultPersistFailed => SteamError::PersistFailed,
-            sys::EResult::k_EResultLockingFailed => SteamError::LockingFailed,
-            sys::EResult::k_EResultLogonSessionReplaced => SteamError::LogonSessionReplaced,
-            sys::EResult::k_EResultConnectFailed => SteamError::ConnectFailed,
-            sys::EResult::k_EResultHandshakeFailed => SteamError::HandshakeFailed,
-            sys::EResult::k_EResultIOFailure => SteamError::IOFailure,
-            sys::EResult::k_EResultRemoteDisconnect => SteamError::RemoteDisconnect,
-            sys::EResult::k_EResultShoppingCartNotFound => SteamError::ShoppingCartNotFound,
-            sys::EResult::k_EResultBlocked => SteamError::Blocked,
-            sys::EResult::k_EResultIgnored => SteamError::Ignored,
-            sys::EResult::k_EResultNoMatch => SteamError::NoMatch,
-            sys::EResult::k_EResultAccountDisabled => SteamError::AccountDisabled,
-            sys::EResult::k_EResultServiceReadOnly => SteamError::ServiceReadOnly,
-            sys::EResult::k_EResultAccountNotFeatured => SteamError::AccountNotFeatured,
-            sys::EResult::k_EResultAdministratorOK => SteamError::AdministratorOK,
-            sys::EResult::k_EResultContentVersion => SteamError::ContentVersion,
-            sys::EResult::k_EResultTryAnotherCM => SteamError::TryAnotherCM,
-            sys::EResult::k_EResultPasswordRequiredToKickSession => {
-                SteamError::PasswordRequiredToKickSession
-            }
-            sys::EResult::k_EResultAlreadyLoggedInElsewhere => SteamError::AlreadyLoggedInElsewhere,
-            sys::EResult::k_EResultSuspended => SteamError::Suspended,
-            sys::EResult::k_EResultCancelled => SteamError::Cancelled,
-            sys::EResult::k_EResultDataCorruption => SteamError::DataCorruption,
-            sys::EResult::k_EResultDiskFull => SteamError::DiskFull,
-            sys::EResult::k_EResultRemoteCallFailed => SteamError::RemoteCallFailed,
-            sys::EResult::k_EResultPasswordUnset => SteamError::PasswordUnset,
-            sys::EResult::k_EResultExternalAccountUnlinked => SteamError::ExternalAccountUnlinked,
-            sys::EResult::k_EResultPSNTicketInvalid => SteamError::PSNTicketInvalid,
-            sys::EResult::k_EResultExternalAccountAlreadyLinked => {
-                SteamError::ExternalAccountAlreadyLinked
-            }
-            sys::EResult::k_EResultRemoteFileConflict => SteamError::RemoteFileConflict,
-            sys::EResult::k_EResultIllegalPassword => SteamError::IllegalPassword,
-            sys::EResult::k_EResultSameAsPreviousValue => SteamError::SameAsPreviousValue,
-            sys::EResult::k_EResultAccountLogonDenied => SteamError::AccountLogonDenied,
-            sys::EResult::k_EResultCannotUseOldPassword => SteamError::CannotUseOldPassword,
-            sys::EResult::k_EResultInvalidLoginAuthCode => SteamError::InvalidLoginAuthCode,
-            sys::EResult::k_EResultAccountLogonDeniedNoMail => SteamError::AccountLogonDeniedNoMail,
-            sys::EResult::k_EResultHardwareNotCapableOfIPT => SteamError::HardwareNotCapableOfIPT,
-            sys::EResult::k_EResultIPTInitError => SteamError::IPTInitError,
-            sys::EResult::k_EResultParentalControlRestricted => {
-                SteamError::ParentalControlRestricted
-            }
-            sys::EResult::k_EResultFacebookQueryError => SteamError::FacebookQueryError,
-            sys::EResult::k_EResultExpiredLoginAuthCode => SteamError::ExpiredLoginAuthCode,
-            sys::EResult::k_EResultIPLoginRestrictionFailed => SteamError::IPLoginRestrictionFailed,
-            sys::EResult::k_EResultAccountLockedDown => SteamError::AccountLockedDown,
-            sys::EResult::k_EResultAccountLogonDeniedVerifiedEmailRequired => {
-                SteamError::AccountLogonDeniedVerifiedEmailRequired
-            }
-            sys::EResult::k_EResultNoMatchingURL => SteamError::NoMatchingURL,
-            sys::EResult::k_EResultBadResponse => SteamError::BadResponse,
-            sys::EResult::k_EResultRequirePasswordReEntry => SteamError::RequirePasswordReEntry,
-            sys::EResult::k_EResultValueOutOfRange => SteamError::ValueOutOfRange,
-            sys::EResult::k_EResultUnexpectedError => SteamError::UnexpectedError,
-            sys::EResult::k_EResultDisabled => SteamError::Disabled,
-            sys::EResult::k_EResultInvalidCEGSubmission => SteamError::InvalidCEGSubmission,
-            sys::EResult::k_EResultRestrictedDevice => SteamError::RestrictedDevice,
-            sys::EResult::k_EResultRegionLocked => SteamError::RegionLocked,
-            sys::EResult::k_EResultRateLimitExceeded => SteamError::RateLimitExceeded,
-            sys::EResult::k_EResultAccountLoginDeniedNeedTwoFactor => {
-                SteamError::AccountLoginDeniedNeedTwoFactor
-            }
-            sys::EResult::k_EResultItemDeleted => SteamError::ItemDeleted,
-            sys::EResult::k_EResultAccountLoginDeniedThrottle => {
-                SteamError::AccountLoginDeniedThrottle
-            }
-            sys::EResult::k_EResultTwoFactorCodeMismatch => SteamError::TwoFactorCodeMismatch,
-            sys::EResult::k_EResultTwoFactorActivationCodeMismatch => {
-                SteamError::TwoFactorActivationCodeMismatch
-            }
-            sys::EResult::k_EResultAccountAssociatedToMultiplePartners => {
-                SteamError::AccountAssociatedToMultiplePartners
-            }
-            sys::EResult::k_EResultNotModified => SteamError::NotModified,
-            sys::EResult::k_EResultNoMobileDevice => SteamError::NoMobileDevice,
-            sys::EResult::k_EResultTimeNotSynced => SteamError::TimeNotSynced,
-            sys::EResult::k_EResultSmsCodeFailed => SteamError::SmsCodeFailed,
-            sys::EResult::k_EResultAccountLimitExceeded => SteamError::AccountLimitExceeded,
-            sys::EResult::k_EResultAccountActivityLimitExceeded => {
-                SteamError::AccountActivityLimitExceeded
-            }
-            sys::EResult::k_EResultPhoneActivityLimitExceeded => {
-                SteamError::PhoneActivityLimitExceeded
-            }
-            sys::EResult::k_EResultRefundToWallet => SteamError::RefundToWallet,
-            sys::EResult::k_EResultEmailSendFailure => SteamError::EmailSendFailure,
-            sys::EResult::k_EResultNotSettled => SteamError::NotSettled,
-            sys::EResult::k_EResultNeedCaptcha => SteamError::NeedCaptcha,
-            sys::EResult::k_EResultGSLTDenied => SteamError::GSLTDenied,
-            sys::EResult::k_EResultGSOwnerDenied => SteamError::GSOwnerDenied,
-            sys::EResult::k_EResultInvalidItemType => SteamError::InvalidItemType,
-            sys::EResult::k_EResultIPBanned => SteamError::IPBanned,
-            sys::EResult::k_EResultGSLTExpired => SteamError::GSLTExpired,
-            sys::EResult::k_EResultInsufficientFunds => SteamError::InsufficientFunds,
-            sys::EResult::k_EResultTooManyPending => SteamError::TooManyPending,
-            sys::EResult::k_EResultNoSiteLicensesFound => SteamError::NoSiteLicensesFound,
-            sys::EResult::k_EResultWGNetworkSendExceeded => SteamError::WGNetworkSendExceeded,
-            sys::EResult::k_EResultAccountNotFriends => SteamError::AccountNotFriends,
-            sys::EResult::k_EResultLimitedUserAccount => SteamError::LimitedUserAccount,
-            sys::EResult::k_EResultCantRemoveItem => SteamError::CantRemoveItem,
-            sys::EResult::k_EResultAccountDeleted => SteamError::AccountDeleted,
-            sys::EResult::k_EResultExistingUserCancelledLicense => {
-                SteamError::ExistingUserCancelledLicense
-            }
-            sys::EResult::k_EResultCommunityCooldown => SteamError::CommunityCooldown,
-            sys::EResult::k_EResultNoLauncherSpecified => SteamError::NoLauncherSpecified,
-            sys::EResult::k_EResultMustAgreeToSSA => SteamError::MustAgreeToSSA,
-            sys::EResult::k_EResultLauncherMigrated => SteamError::LauncherMigrated,
-            sys::EResult::k_EResultSteamRealmMismatch => SteamError::SteamRealmMismatch,
-            sys::EResult::k_EResultInvalidSignature => SteamError::InvalidSignature,
-            sys::EResult::k_EResultParseFailure => SteamError::ParseFailure,
-            sys::EResult::k_EResultNoVerifiedPhone => SteamError::NoVerifiedPhone,
-            sys::EResult::k_EResultInsufficientBattery => SteamError::InsufficientBattery,
-            sys::EResult::k_EResultChargerRequired => SteamError::ChargerRequired,
-            sys::EResult::k_EResultCachedCredentialInvalid => SteamError::CachedCredentialInvalid,
-            sys::EResult::k_EResultNotSupported => SteamError::NotSupported,
-            sys::EResult::k_EResultFamilySizeLimitExceeded => SteamError::FamilySizeLimitExceeded,
-            sys::EResult::k_EResultOfflineAppCacheInvalid => SteamError::OfflineAppCacheInvalid,
-            sys::EResult::k_EResultTryLater => SteamError::TryLater,
-            _ => unreachable!(),
-        }
+// There is no Try<EResult>
+impl TryFrom<sys::EResult> for SteamError {
+    type Error = InvalidSteamError;
+    fn try_from(raw: sys::EResult) -> Result<Self, Self::Error> {
+        Self::try_from(raw as i64)
     }
 }
 
-impl TryFrom<i64> for SteamError {
-    type Error = InvalidErrorCode;
-
-    fn try_from(r: i64) -> Result<Self, Self::Error> {
-        let error = match r {
-            x if x == sys::EResult::k_EResultFail as i64 => SteamError::Generic,
-            x if x == sys::EResult::k_EResultNoConnection as i64 => SteamError::NoConnection,
-            x if x == sys::EResult::k_EResultInvalidPassword as i64 => SteamError::InvalidPassword,
-            x if x == sys::EResult::k_EResultLoggedInElsewhere as i64 => {
-                SteamError::LoggedInElsewhere
-            }
-            x if x == sys::EResult::k_EResultInvalidProtocolVer as i64 => {
-                SteamError::InvalidProtocolVersion
-            }
-            x if x == sys::EResult::k_EResultInvalidParam as i64 => SteamError::InvalidParameter,
-            x if x == sys::EResult::k_EResultFileNotFound as i64 => SteamError::FileNotFound,
-            x if x == sys::EResult::k_EResultBusy as i64 => SteamError::Busy,
-            x if x == sys::EResult::k_EResultInvalidState as i64 => SteamError::InvalidState,
-            x if x == sys::EResult::k_EResultInvalidName as i64 => SteamError::InvalidName,
-            x if x == sys::EResult::k_EResultInvalidEmail as i64 => SteamError::InvalidEmail,
-            x if x == sys::EResult::k_EResultDuplicateName as i64 => SteamError::DuplicateName,
-            x if x == sys::EResult::k_EResultAccessDenied as i64 => SteamError::AccessDenied,
-            x if x == sys::EResult::k_EResultTimeout as i64 => SteamError::Timeout,
-            x if x == sys::EResult::k_EResultBanned as i64 => SteamError::Banned,
-            x if x == sys::EResult::k_EResultAccountNotFound as i64 => SteamError::AccountNotFound,
-            x if x == sys::EResult::k_EResultInvalidSteamID as i64 => SteamError::InvalidSteamID,
-            x if x == sys::EResult::k_EResultServiceUnavailable as i64 => {
-                SteamError::ServiceUnavailable
-            }
-            x if x == sys::EResult::k_EResultNotLoggedOn as i64 => SteamError::NotLoggedOn,
-            x if x == sys::EResult::k_EResultPending as i64 => SteamError::Pending,
-            x if x == sys::EResult::k_EResultEncryptionFailure as i64 => {
-                SteamError::EncryptionFailure
-            }
-            x if x == sys::EResult::k_EResultInsufficientPrivilege as i64 => {
-                SteamError::InsufficientPrivilege
-            }
-            x if x == sys::EResult::k_EResultLimitExceeded as i64 => SteamError::LimitExceeded,
-            x if x == sys::EResult::k_EResultRevoked as i64 => SteamError::Revoked,
-            x if x == sys::EResult::k_EResultExpired as i64 => SteamError::Expired,
-            x if x == sys::EResult::k_EResultAlreadyRedeemed as i64 => SteamError::AlreadyRedeemed,
-            x if x == sys::EResult::k_EResultDuplicateRequest as i64 => {
-                SteamError::DuplicateRequest
-            }
-            x if x == sys::EResult::k_EResultAlreadyOwned as i64 => SteamError::AlreadyOwned,
-            x if x == sys::EResult::k_EResultIPNotFound as i64 => SteamError::IPNotFound,
-            x if x == sys::EResult::k_EResultPersistFailed as i64 => SteamError::PersistFailed,
-            x if x == sys::EResult::k_EResultLockingFailed as i64 => SteamError::LockingFailed,
-            x if x == sys::EResult::k_EResultLogonSessionReplaced as i64 => {
-                SteamError::LogonSessionReplaced
-            }
-            x if x == sys::EResult::k_EResultConnectFailed as i64 => SteamError::ConnectFailed,
-            x if x == sys::EResult::k_EResultHandshakeFailed as i64 => SteamError::HandshakeFailed,
-            x if x == sys::EResult::k_EResultIOFailure as i64 => SteamError::IOFailure,
-            x if x == sys::EResult::k_EResultRemoteDisconnect as i64 => {
-                SteamError::RemoteDisconnect
-            }
-            x if x == sys::EResult::k_EResultShoppingCartNotFound as i64 => {
-                SteamError::ShoppingCartNotFound
-            }
-            x if x == sys::EResult::k_EResultBlocked as i64 => SteamError::Blocked,
-            x if x == sys::EResult::k_EResultIgnored as i64 => SteamError::Ignored,
-            x if x == sys::EResult::k_EResultNoMatch as i64 => SteamError::NoMatch,
-            x if x == sys::EResult::k_EResultAccountDisabled as i64 => SteamError::AccountDisabled,
-            x if x == sys::EResult::k_EResultServiceReadOnly as i64 => SteamError::ServiceReadOnly,
-            x if x == sys::EResult::k_EResultAccountNotFeatured as i64 => {
-                SteamError::AccountNotFeatured
-            }
-            x if x == sys::EResult::k_EResultAdministratorOK as i64 => SteamError::AdministratorOK,
-            x if x == sys::EResult::k_EResultContentVersion as i64 => SteamError::ContentVersion,
-            x if x == sys::EResult::k_EResultTryAnotherCM as i64 => SteamError::TryAnotherCM,
-            x if x == sys::EResult::k_EResultPasswordRequiredToKickSession as i64 => {
-                SteamError::PasswordRequiredToKickSession
-            }
-            x if x == sys::EResult::k_EResultAlreadyLoggedInElsewhere as i64 => {
-                SteamError::AlreadyLoggedInElsewhere
-            }
-            x if x == sys::EResult::k_EResultSuspended as i64 => SteamError::Suspended,
-            x if x == sys::EResult::k_EResultCancelled as i64 => SteamError::Cancelled,
-            x if x == sys::EResult::k_EResultDataCorruption as i64 => SteamError::DataCorruption,
-            x if x == sys::EResult::k_EResultDiskFull as i64 => SteamError::DiskFull,
-            x if x == sys::EResult::k_EResultRemoteCallFailed as i64 => {
-                SteamError::RemoteCallFailed
-            }
-            x if x == sys::EResult::k_EResultPasswordUnset as i64 => SteamError::PasswordUnset,
-            x if x == sys::EResult::k_EResultExternalAccountUnlinked as i64 => {
-                SteamError::ExternalAccountUnlinked
-            }
-            x if x == sys::EResult::k_EResultPSNTicketInvalid as i64 => {
-                SteamError::PSNTicketInvalid
-            }
-            x if x == sys::EResult::k_EResultExternalAccountAlreadyLinked as i64 => {
-                SteamError::ExternalAccountAlreadyLinked
-            }
-            x if x == sys::EResult::k_EResultRemoteFileConflict as i64 => {
-                SteamError::RemoteFileConflict
-            }
-            x if x == sys::EResult::k_EResultIllegalPassword as i64 => SteamError::IllegalPassword,
-            x if x == sys::EResult::k_EResultSameAsPreviousValue as i64 => {
-                SteamError::SameAsPreviousValue
-            }
-            x if x == sys::EResult::k_EResultAccountLogonDenied as i64 => {
-                SteamError::AccountLogonDenied
-            }
-            x if x == sys::EResult::k_EResultCannotUseOldPassword as i64 => {
-                SteamError::CannotUseOldPassword
-            }
-            x if x == sys::EResult::k_EResultInvalidLoginAuthCode as i64 => {
-                SteamError::InvalidLoginAuthCode
-            }
-            x if x == sys::EResult::k_EResultAccountLogonDeniedNoMail as i64 => {
-                SteamError::AccountLogonDeniedNoMail
-            }
-            x if x == sys::EResult::k_EResultHardwareNotCapableOfIPT as i64 => {
-                SteamError::HardwareNotCapableOfIPT
-            }
-            x if x == sys::EResult::k_EResultIPTInitError as i64 => SteamError::IPTInitError,
-            x if x == sys::EResult::k_EResultParentalControlRestricted as i64 => {
-                SteamError::ParentalControlRestricted
-            }
-            x if x == sys::EResult::k_EResultFacebookQueryError as i64 => {
-                SteamError::FacebookQueryError
-            }
-            x if x == sys::EResult::k_EResultExpiredLoginAuthCode as i64 => {
-                SteamError::ExpiredLoginAuthCode
-            }
-            x if x == sys::EResult::k_EResultIPLoginRestrictionFailed as i64 => {
-                SteamError::IPLoginRestrictionFailed
-            }
-            x if x == sys::EResult::k_EResultAccountLockedDown as i64 => {
-                SteamError::AccountLockedDown
-            }
-            x if x == sys::EResult::k_EResultAccountLogonDeniedVerifiedEmailRequired as i64 => {
-                SteamError::AccountLogonDeniedVerifiedEmailRequired
-            }
-            x if x == sys::EResult::k_EResultNoMatchingURL as i64 => SteamError::NoMatchingURL,
-            x if x == sys::EResult::k_EResultBadResponse as i64 => SteamError::BadResponse,
-            x if x == sys::EResult::k_EResultRequirePasswordReEntry as i64 => {
-                SteamError::RequirePasswordReEntry
-            }
-            x if x == sys::EResult::k_EResultValueOutOfRange as i64 => SteamError::ValueOutOfRange,
-            x if x == sys::EResult::k_EResultUnexpectedError as i64 => SteamError::UnexpectedError,
-            x if x == sys::EResult::k_EResultDisabled as i64 => SteamError::Disabled,
-            x if x == sys::EResult::k_EResultInvalidCEGSubmission as i64 => {
-                SteamError::InvalidCEGSubmission
-            }
-            x if x == sys::EResult::k_EResultRestrictedDevice as i64 => {
-                SteamError::RestrictedDevice
-            }
-            x if x == sys::EResult::k_EResultRegionLocked as i64 => SteamError::RegionLocked,
-            x if x == sys::EResult::k_EResultRateLimitExceeded as i64 => {
-                SteamError::RateLimitExceeded
-            }
-            x if x == sys::EResult::k_EResultAccountLoginDeniedNeedTwoFactor as i64 => {
-                SteamError::AccountLoginDeniedNeedTwoFactor
-            }
-            x if x == sys::EResult::k_EResultItemDeleted as i64 => SteamError::ItemDeleted,
-            x if x == sys::EResult::k_EResultAccountLoginDeniedThrottle as i64 => {
-                SteamError::AccountLoginDeniedThrottle
-            }
-            x if x == sys::EResult::k_EResultTwoFactorCodeMismatch as i64 => {
-                SteamError::TwoFactorCodeMismatch
-            }
-            x if x == sys::EResult::k_EResultTwoFactorActivationCodeMismatch as i64 => {
-                SteamError::TwoFactorActivationCodeMismatch
-            }
-            x if x == sys::EResult::k_EResultAccountAssociatedToMultiplePartners as i64 => {
-                SteamError::AccountAssociatedToMultiplePartners
-            }
-            x if x == sys::EResult::k_EResultNotModified as i64 => SteamError::NotModified,
-            x if x == sys::EResult::k_EResultNoMobileDevice as i64 => SteamError::NoMobileDevice,
-            x if x == sys::EResult::k_EResultTimeNotSynced as i64 => SteamError::TimeNotSynced,
-            x if x == sys::EResult::k_EResultSmsCodeFailed as i64 => SteamError::SmsCodeFailed,
-            x if x == sys::EResult::k_EResultAccountLimitExceeded as i64 => {
-                SteamError::AccountLimitExceeded
-            }
-            x if x == sys::EResult::k_EResultAccountActivityLimitExceeded as i64 => {
-                SteamError::AccountActivityLimitExceeded
-            }
-            x if x == sys::EResult::k_EResultPhoneActivityLimitExceeded as i64 => {
-                SteamError::PhoneActivityLimitExceeded
-            }
-            x if x == sys::EResult::k_EResultRefundToWallet as i64 => SteamError::RefundToWallet,
-            x if x == sys::EResult::k_EResultEmailSendFailure as i64 => {
-                SteamError::EmailSendFailure
-            }
-            x if x == sys::EResult::k_EResultNotSettled as i64 => SteamError::NotSettled,
-            x if x == sys::EResult::k_EResultNeedCaptcha as i64 => SteamError::NeedCaptcha,
-            x if x == sys::EResult::k_EResultGSLTDenied as i64 => SteamError::GSLTDenied,
-            x if x == sys::EResult::k_EResultGSOwnerDenied as i64 => SteamError::GSOwnerDenied,
-            x if x == sys::EResult::k_EResultInvalidItemType as i64 => SteamError::InvalidItemType,
-            x if x == sys::EResult::k_EResultIPBanned as i64 => SteamError::IPBanned,
-            x if x == sys::EResult::k_EResultGSLTExpired as i64 => SteamError::GSLTExpired,
-            x if x == sys::EResult::k_EResultInsufficientFunds as i64 => {
-                SteamError::InsufficientFunds
-            }
-            x if x == sys::EResult::k_EResultTooManyPending as i64 => SteamError::TooManyPending,
-            x if x == sys::EResult::k_EResultNoSiteLicensesFound as i64 => {
-                SteamError::NoSiteLicensesFound
-            }
-            x if x == sys::EResult::k_EResultWGNetworkSendExceeded as i64 => {
-                SteamError::WGNetworkSendExceeded
-            }
-            x if x == sys::EResult::k_EResultCommunityCooldown as i64 => {
-                SteamError::CommunityCooldown
-            }
-            x if x == sys::EResult::k_EResultNoLauncherSpecified as i64 => {
-                SteamError::NoLauncherSpecified
-            }
-            x if x == sys::EResult::k_EResultMustAgreeToSSA as i64 => SteamError::MustAgreeToSSA,
-            x if x == sys::EResult::k_EResultLauncherMigrated as i64 => {
-                SteamError::LauncherMigrated
-            }
-            x if x == sys::EResult::k_EResultSteamRealmMismatch as i64 => {
-                SteamError::SteamRealmMismatch
-            }
-            x if x == sys::EResult::k_EResultInvalidSignature as i64 => {
-                SteamError::InvalidSignature
-            }
-            x if x == sys::EResult::k_EResultParseFailure as i64 => SteamError::ParseFailure,
-            x if x == sys::EResult::k_EResultNoVerifiedPhone as i64 => SteamError::NoVerifiedPhone,
-            x if x == sys::EResult::k_EResultInsufficientBattery as i64 => {
-                SteamError::InsufficientBattery
-            }
-            x if x == sys::EResult::k_EResultChargerRequired as i64 => SteamError::ChargerRequired,
-            x if x == sys::EResult::k_EResultCachedCredentialInvalid as i64 => {
-                SteamError::CachedCredentialInvalid
-            }
-            x if x == sys::EResult::k_EResultNotSupported as i64 => SteamError::NotSupported,
-            x if x == sys::EResult::k_EResultFamilySizeLimitExceeded as i64 => {
-                SteamError::FamilySizeLimitExceeded
-            }
-            x if x == sys::EResult::k_EResultOfflineAppCacheInvalid as i64 => {
-                SteamError::OfflineAppCacheInvalid
-            }
-            x if x == sys::EResult::k_EResultTryLater as i64 => SteamError::TryLater,
-            _ => return Err(InvalidErrorCode),
-        };
-        Ok(error)
-    }
-}
-
+/// Unrecognized error code, or code that isn't an error ([`sys::EResult::k_EResultOK`])
 #[derive(Debug, Error)]
-#[error("error code could not be converted to rust enum")]
-pub struct InvalidErrorCode;
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum InvalidSteamError {
+    /// Error wasn't an error after all, but Ok
+    #[error("error is 'ok'")]
+    Ok,
+    /// Error code was not recognized as a valid error code by steamworks-rs
+    #[error("error code {0} could not be converted to enum")]
+    Unknown(i64),
+}
 
+/// Error returned in API initialization.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SteamAPIInitError {
     #[error("Some other failure")]
-    FailedGeneric(String),
+    Generic(String),
 
+    /// Returned when we can't connect to steam, probably because it's not running.
     #[error("We cannot connect to Steam, steam probably isn't running")]
     NoSteamClient(String),
 
+    /// Returned when the version of the steam client is too old to work with this version of the API.
     #[error("Steam client appears to be out of date")]
     VersionMismatch(String),
 }
@@ -856,7 +552,7 @@ impl SteamAPIInitError {
 
         match result {
             sys::ESteamAPIInitResult::k_ESteamAPIInitResult_FailedGeneric => {
-                SteamAPIInitError::FailedGeneric(err_string)
+                SteamAPIInitError::Generic(err_string)
             }
             sys::ESteamAPIInitResult::k_ESteamAPIInitResult_NoSteamClient => {
                 SteamAPIInitError::NoSteamClient(err_string)

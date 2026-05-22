@@ -222,12 +222,8 @@ impl SteamFile {
                         cb(Err(SteamError::IOFailure));
                         return;
                     }
-                    if v.m_eResult != sys::EResult::k_EResultOK {
-                        cb(Err(v.m_eResult.into()));
-                        return;
-                    }
 
-                    cb(Ok(v.m_hFile))
+                    cb(to_steam_result(v.m_eResult).map(|()| v.m_hFile))
                 },
             )
         }
@@ -312,7 +308,7 @@ impl std::io::Read for SteamFileReader {
                 &mut failed,
             );
 
-            if callback.m_eResult != sys::EResult::k_EResultOK {
+            if to_steam_result(callback.m_eResult).is_err() {
                 return Err(std::io::ErrorKind::Other.into());
             }
             let size = callback.m_cubRead as usize;
