@@ -105,9 +105,12 @@ impl NetworkingUtils {
         mut callback: impl FnMut(RelayNetworkStatus) + Send + 'static,
     ) {
         unsafe {
-            register_callback(&self.inner, move |status: RelayNetworkStatusCallback| {
-                callback(status.status);
-            });
+            std::mem::forget(register_callback(
+                &self.inner,
+                move |status: RelayNetworkStatusCallback| {
+                    callback(status.status);
+                },
+            ));
         }
     }
 }
