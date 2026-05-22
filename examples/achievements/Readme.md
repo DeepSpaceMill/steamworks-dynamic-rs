@@ -15,27 +15,22 @@ To use, you'll first need to call `client.user_stats().request_global_achievemen
 #### Example:
 
 ```rust
-use steamworks::{Client,AppId};
+use steamworks::{Client, AppId};
 
 fn main() {
-    let (client,single) = Client::init_app(AppId(4000)).unwrap();
+    let client = Client::init_app(AppId(4000)).unwrap();
     let name = "GMA_BALLEATER";
 
-    client.user_stats().request_global_achievement_percentages(move|result| {
-        if !result.is_err() {
+    client.user_stats().request_global_achievement_percentages(move |result| {
+        if result.is_ok() {
             let user_stats = client.user_stats();
             let achievement = user_stats.achievement(name);
 
             let ach_percent = achievement.get_achievement_achieved_percent().unwrap();
         } else {
-            eprintln!("Error fetching achievement percentage for {}",name);
+            eprintln!("Error fetching achievement percentage for {name}");
         }
     });
-
-    for _ in 0..50 {
-        single.run_callbacks();
-        std::thread::sleep(std::time::Duration::from_millis(100));
-    }
 }
 ```
 
@@ -53,10 +48,10 @@ Returns a string for the result of the specified attribute type. Accepted values
 #### Example:
 
 ```rust
-use steamworks::{Client,AppId};
+use steamworks::{Client, AppId};
 
 fn main() {
-    let (client,single) = Client::init_app(AppId(4000)).unwrap();
+    let client = Client::init_app(AppId(4000)).unwrap();
     let name = "GMA_BALLEATER";
 
     let user_stats = client.user_stats();
@@ -91,10 +86,10 @@ To convert the buffer into an image, you can use an external crate to convert th
 #### Example:
 
 ```rust
-use steamworks::{Client,AppId};
+use steamworks::{Client, AppId};
 
 fn main() {
-    let (client,single) = Client::init_app(AppId(4000)).unwrap();
+    let client = Client::init_app(AppId(4000)).unwrap();
     let name = "GMA_BALLEATER";
 
     let user_stats = client.user_stats();
@@ -114,14 +109,14 @@ Returns the number of achievements for the current AppId.
 #### Example:
 
 ```rust
-use steamworks::{Client,AppId};
+use steamworks::{Client, AppId};
 
 fn main() {
-    let (client,single) = Client::init_app(AppId(4000)).unwrap();
+    let client = Client::init_app(AppId(4000)).unwrap();
 
     let num = client.user_stats().get_num_achievements().expect("Failed to get number of achievements");
 
-    println!("{}",num);
+    println!("{num}");
 }
 ```
 
@@ -135,11 +130,10 @@ Returns a `Vec<String>` containing the API names of all achievements for the cur
 #### Example:
 
 ```rust
-use steamworks::{Client,AppId};
+use steamworks::{Client, AppId};
 
 fn main() {
-    let (client,single) = Client::init_app(AppId(4000)).unwrap();
-    let name = "GMA_BALLEATER";
+    let client = Client::init_app(AppId(4000)).unwrap();
 
     let names = client.user_stats().get_achievement_names().expect("Failed to get achievement names");
 }
