@@ -132,6 +132,19 @@ impl Matchmaking {
         }
     }
 
+    /// Refreshes all of the metadata for a lobby that you're not in.
+    ///
+    /// You never need to call this for lobbies you're a member of, that data
+    /// will always be up to date. This will send down all of the metadata for
+    /// the lobby, overwriting local data.
+    ///
+    /// # Triggers
+    ///
+    /// * `LobbyDataUpdate`
+    pub fn request_lobby_data(&self, lobby: LobbyId) -> bool {
+        unsafe { sys::SteamAPI_ISteamMatchmaking_RequestLobbyData(self.mm, lobby.0) }
+    }
+
     /// Returns the number of data keys in the lobby
     pub fn lobby_data_count(&self, lobby: LobbyId) -> u32 {
         unsafe { sys::SteamAPI_ISteamMatchmaking_GetLobbyDataCount(self.mm, lobby.0) as _ }
