@@ -1699,7 +1699,7 @@ impl<'a> QueryResults<'a> {
             );
             debug_assert!(ok);
 
-            if raw_details.m_eResult != sys::EResult::k_EResultOK {
+            if to_steam_result(raw_details.m_eResult).is_err() {
                 return None;
             }
 

@@ -1153,15 +1153,15 @@ impl_callback!(cb: LobbyChatUpdate_t => LobbyChatUpdate {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct LobbyCreated {
-    /// The result of the operation (EResult). Possible values: k_EResultOK, k_EResultFail, k_EResultTimeout, k_EResultLimitExceeded, k_EResultAccessDenied, k_EResultNoConnection
-    pub result: u32,
+    /// The result of the operation
+    pub result: SteamResult,
     /// The Steam ID of the lobby that was created, 0 if failed.
     pub lobby: LobbyId,
 }
 
 impl_callback!(cb: LobbyCreated_t => LobbyCreated {
     Self {
-        result: cb.m_eResult as u32,
+        result: to_steam_result(cb.m_eResult),
         lobby: LobbyId(cb.m_ulSteamIDLobby),
     }
 });

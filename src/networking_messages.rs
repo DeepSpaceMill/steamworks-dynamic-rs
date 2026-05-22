@@ -27,7 +27,7 @@ use crate::networking_types::{
     NetConnectionInfo, NetConnectionRealTimeInfo, NetworkingConnectionState, NetworkingIdentity,
     NetworkingMessage, SendFlags,
 };
-use crate::{register_callback, to_steam_result, Callback, Inner, SteamError};
+use crate::{Callback, Inner, SteamResult, register_callback, to_steam_result};
 use std::ffi::c_void;
 use std::sync::{Arc, Weak};
 
@@ -91,7 +91,7 @@ impl NetworkingMessages {
         send_type: SendFlags,
         data: &[u8],
         channel: u32,
-    ) -> Result<(), SteamError> {
+    ) -> SteamResult {
         let result = unsafe {
             sys::SteamAPI_ISteamNetworkingMessages_SendMessageToUser(
                 self.net,

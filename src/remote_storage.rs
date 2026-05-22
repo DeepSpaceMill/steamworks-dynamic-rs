@@ -308,7 +308,7 @@ impl std::io::Read for SteamFileReader {
                 &mut failed,
             );
 
-            if callback.m_eResult != sys::EResult::k_EResultOK {
+            if to_steam_result(callback.m_eResult).is_err() {
                 return Err(std::io::ErrorKind::Other.into());
             }
             let size = callback.m_cubRead as usize;
