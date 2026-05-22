@@ -252,7 +252,7 @@ impl Utils {
         unsafe {
             let description = CString::new(description).unwrap();
             let existing_text = existing_text.map(|s| CString::new(s).unwrap());
-            register_callback(&self._inner, dismissed_cb);
+            std::mem::forget(register_callback(&self._inner, dismissed_cb));
             sys::SteamAPI_ISteamUtils_ShowGamepadTextInput(
                 self.utils,
                 input_mode.into(),
@@ -286,9 +286,9 @@ impl Utils {
         F: FnMut() + 'static + Send, // TODO: Support FnOnce callbacks
     {
         unsafe {
-            register_callback(&self._inner, move |_: FloatingGamepadTextInputDismissed| {
+            std::mem::forget(register_callback(&self._inner, move |_: FloatingGamepadTextInputDismissed| {
                 dismissed_cb();
-            });
+            }));
             sys::SteamAPI_ISteamUtils_ShowFloatingGamepadTextInput(
                 self.utils,
                 keyboard_mode.into(),
