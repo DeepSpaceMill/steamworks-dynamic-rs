@@ -286,9 +286,12 @@ impl Utils {
         F: FnMut() + 'static + Send, // TODO: Support FnOnce callbacks
     {
         unsafe {
-            std::mem::forget(register_callback(&self._inner, move |_: FloatingGamepadTextInputDismissed| {
-                dismissed_cb();
-            }));
+            std::mem::forget(register_callback(
+                &self._inner,
+                move |_: FloatingGamepadTextInputDismissed| {
+                    dismissed_cb();
+                },
+            ));
             sys::SteamAPI_ISteamUtils_ShowFloatingGamepadTextInput(
                 self.utils,
                 keyboard_mode.into(),
