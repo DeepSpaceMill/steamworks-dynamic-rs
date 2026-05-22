@@ -27,7 +27,7 @@ use crate::networking_types::{
     NetConnectionInfo, NetConnectionRealTimeInfo, NetworkingConnectionState, NetworkingIdentity,
     NetworkingMessage, SendFlags,
 };
-use crate::{Callback, Inner, SteamResult, register_callback, to_steam_result};
+use crate::{register_callback, to_steam_result, Callback, Inner, SteamResult};
 use std::ffi::c_void;
 use std::sync::{Arc, Weak};
 
