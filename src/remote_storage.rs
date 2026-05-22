@@ -222,12 +222,8 @@ impl SteamFile {
                         cb(Err(SteamError::IOFailure));
                         return;
                     }
-                    if v.m_eResult != sys::EResult::k_EResultOK {
-                        cb(Err(v.m_eResult.into()));
-                        return;
-                    }
 
-                    cb(Ok(v.m_hFile))
+                    cb(to_steam_result(v.m_eResult).map(|()| v.m_hFile))
                 },
             )
         }

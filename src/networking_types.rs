@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::networking_sockets::{InnerSocket, NetConnection};
 use crate::networking_types::NetConnectionError::UnhandledType;
-use crate::{Callback, Inner, SResult, SteamId};
+use crate::{Callback, Inner, SteamId, SteamResult};
 use std::convert::{TryFrom, TryInto};
 use std::ffi::{c_void, CString};
 use std::fmt::{Debug, Display, Formatter};
@@ -1518,7 +1518,7 @@ impl ConnectionRequest {
         self.user_data
     }
 
-    pub fn accept(self) -> SResult<()> {
+    pub fn accept(self) -> SteamResult {
         self.connection.accept()
     }
 

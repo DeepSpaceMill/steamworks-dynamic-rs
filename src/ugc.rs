@@ -496,10 +496,7 @@ impl_callback!(cb: DownloadItemResult_t => DownloadItemResult {
     Self {
         app_id: AppId(cb.m_unAppID),
         published_file_id: PublishedFileId(cb.m_nPublishedFileId),
-        error: match cb.m_eResult {
-            sys::EResult::k_EResultOK => None,
-            error => Some(error.into()),
-        },
+        error: to_steam_result(cb.m_eResult).err(),
     }
 });
 
@@ -513,10 +510,7 @@ pub struct DeleteItemResult {
 impl_callback!(cb: DeleteItemResult_t => DeleteItemResult {
     Self {
         published_file_id: PublishedFileId(cb.m_nPublishedFileId),
-        error: match cb.m_eResult {
-            sys::EResult::k_EResultOK | sys::EResult::k_EResultNone => None,
-            error => Some(error.into()),
-        },
+        error: to_steam_result(cb.m_eResult).err(),
     }
 });
 
@@ -818,10 +812,8 @@ impl UGC {
                 move |v, io_error| {
                     cb(if io_error {
                         Err(SteamError::IOFailure)
-                    } else if v.m_eResult != sys::EResult::k_EResultNone
-                        && v.m_eResult != sys::EResult::k_EResultOK
-                    {
-                        Err(v.m_eResult.into())
+                    } else if let Err(error) = to_steam_result(v.m_eResult) {
+                        Err(error)
                     } else {
                         Ok(())
                     })
@@ -847,8 +839,8 @@ impl UGC {
                 move |v, io_error| {
                     cb(if io_error {
                         Err(SteamError::IOFailure)
-                    } else if v.m_eResult != sys::EResult::k_EResultOK {
-                        Err(v.m_eResult.into())
+                    } else if let Err(error) = to_steam_result(v.m_eResult) {
+                        Err(error)
                     } else {
                         Ok(())
                     })
@@ -874,8 +866,8 @@ impl UGC {
                 move |v, io_error| {
                     cb(if io_error {
                         Err(SteamError::IOFailure)
-                    } else if v.m_eResult != sys::EResult::k_EResultOK {
-                        Err(v.m_eResult.into())
+                    } else if let Err(error) = to_steam_result(v.m_eResult) {
+                        Err(error)
                     } else {
                         Ok(())
                     })
@@ -897,8 +889,8 @@ impl UGC {
                 move |v, io_error| {
                     cb(if io_error {
                         Err(SteamError::IOFailure)
-                    } else if v.m_eResult != sys::EResult::k_EResultOK {
-                        Err(v.m_eResult.into())
+                    } else if let Err(error) = to_steam_result(v.m_eResult) {
+                        Err(error)
                     } else {
                         Ok(())
                     })
@@ -1114,13 +1106,13 @@ impl UpdateHandle {
                 move |v, io_error| {
                     cb(if io_error {
                         Err(SteamError::IOFailure)
-                    } else if v.m_eResult != sys::EResult::k_EResultOK {
-                        Err(v.m_eResult.into())
                     } else {
-                        Ok((
-                            PublishedFileId(v.m_nPublishedFileId),
-                            v.m_bUserNeedsToAcceptWorkshopLegalAgreement,
-                        ))
+                        to_steam_result(v.m_eResult).map(|()| {
+                            (
+                                PublishedFileId(v.m_nPublishedFileId),
+                                v.m_bUserNeedsToAcceptWorkshopLegalAgreement,
+                            )
+                        })
                     })
                 },
             );
@@ -1538,9 +1530,9 @@ impl QueryHandle {
                         sys::SteamAPI_ISteamUGC_ReleaseQueryUGCRequest(ugc, handle);
                         cb(Err(SteamError::IOFailure));
                         return;
-                    } else if v.m_eResult != sys::EResult::k_EResultOK {
+                    } else if let Err(error) = to_steam_result(v.m_eResult) {
                         sys::SteamAPI_ISteamUGC_ReleaseQueryUGCRequest(ugc, handle);
-                        cb(Err(v.m_eResult.into()));
+                        cb(Err(error));
                         return;
                     }
 

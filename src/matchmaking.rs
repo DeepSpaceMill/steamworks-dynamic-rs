@@ -48,7 +48,7 @@ impl LobbyId {
 impl Matchmaking {
     pub fn request_lobby_list<F>(&self, cb: F)
     where
-        F: FnOnce(SResult<Vec<LobbyId>>) + 'static + Send,
+        F: FnOnce(SteamResult<Vec<LobbyId>>) + 'static + Send,
     {
         unsafe {
             let api_call = sys::SteamAPI_ISteamMatchmaking_RequestLobbyList(self.mm);
@@ -85,7 +85,7 @@ impl Matchmaking {
     /// * `LobbyCreated`
     pub fn create_lobby<F>(&self, ty: LobbyType, max_members: u32, cb: F)
     where
-        F: FnOnce(SResult<LobbyId>) + 'static + Send,
+        F: FnOnce(SteamResult<LobbyId>) + 'static + Send,
     {
         assert!(max_members <= 250); // Steam API limits
         unsafe {
