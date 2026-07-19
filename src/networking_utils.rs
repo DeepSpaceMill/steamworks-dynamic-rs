@@ -1,3 +1,4 @@
+use crate::loading::steam_api;
 use crate::networking_types::{NetworkingAvailabilityResult, NetworkingMessage};
 use crate::{register_callback, Callback, Inner};
 use std::convert::TryInto;
@@ -32,8 +33,8 @@ impl NetworkingUtils {
     /// set each of these.
     pub fn allocate_message(&self, buffer_size: usize) -> NetworkingMessage {
         unsafe {
-            let message =
-                sys::SteamAPI_ISteamNetworkingUtils_AllocateMessage(self.utils, buffer_size as _);
+            let message = steam_api()
+                .SteamAPI_ISteamNetworkingUtils_AllocateMessage(self.utils, buffer_size as _);
             NetworkingMessage {
                 message,
                 _inner: self.inner.clone(),
@@ -63,7 +64,7 @@ impl NetworkingUtils {
     /// a "client" and this should be called.
     pub fn init_relay_network_access(&self) {
         unsafe {
-            sys::SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess(self.utils);
+            steam_api().SteamAPI_ISteamNetworkingUtils_InitRelayNetworkAccess(self.utils);
         }
     }
 
@@ -72,11 +73,12 @@ impl NetworkingUtils {
     /// If you want more detailed information use [`detailed_relay_network_status`](#method.detailed_relay_network_status) instead.
     pub fn relay_network_status(&self) -> NetworkingAvailabilityResult {
         unsafe {
-            sys::SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus(
-                self.utils,
-                std::ptr::null_mut(),
-            )
-            .try_into()
+            steam_api()
+                .SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus(
+                    self.utils,
+                    std::ptr::null_mut(),
+                )
+                .try_into()
         }
     }
 
@@ -92,7 +94,8 @@ impl NetworkingUtils {
                     sys::ESteamNetworkingAvailability::k_ESteamNetworkingAvailability_Unknown,
                 m_debugMsg: [0; 256],
             };
-            sys::SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus(self.utils, &mut status);
+            steam_api()
+                .SteamAPI_ISteamNetworkingUtils_GetRelayNetworkStatus(self.utils, &mut status);
             status.into()
         }
     }

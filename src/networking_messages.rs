@@ -22,6 +22,7 @@
 //! without concerning yourself with assigning roles of "client" and "server",
 //! you may find the symmetric connection mode of ISteamNetworkingSockets useful.
 //! (See k_ESteamNetworkingConfig_SymmetricConnect.)
+use crate::loading::steam_api;
 // TODO: examples here
 use crate::networking_types::{
     NetConnectionInfo, NetConnectionRealTimeInfo, NetworkingConnectionState, NetworkingIdentity,
@@ -93,7 +94,7 @@ impl NetworkingMessages {
         channel: u32,
     ) -> SteamResult {
         let result = unsafe {
-            sys::SteamAPI_ISteamNetworkingMessages_SendMessageToUser(
+            steam_api().SteamAPI_ISteamNetworkingMessages_SendMessageToUser(
                 self.net,
                 user.as_ptr(),
                 data.as_ptr().cast(),
@@ -134,12 +135,13 @@ impl NetworkingMessages {
     ) -> Vec<NetworkingMessage> {
         let mut buffer = Vec::with_capacity(batch_size);
         unsafe {
-            let message_count = sys::SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel(
-                self.net,
-                channel as i32,
-                buffer.as_mut_ptr(),
-                batch_size as _,
-            );
+            let message_count = steam_api()
+                .SteamAPI_ISteamNetworkingMessages_ReceiveMessagesOnChannel(
+                    self.net,
+                    channel as i32,
+                    buffer.as_mut_ptr(),
+                    batch_size as _,
+                );
             buffer.set_len(message_count as usize);
         }
 
@@ -237,7 +239,7 @@ impl NetworkingMessages {
             unsafe { std::mem::zeroed() };
 
         let state = unsafe {
-            sys::SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo(
+            steam_api().SteamAPI_ISteamNetworkingMessages_GetSessionConnectionInfo(
                 self.net,
                 identity_remote.as_ptr(),
                 &mut connection_info,
@@ -340,7 +342,7 @@ impl SessionRequest {
     pub fn accept(mut self) -> bool {
         self.accepted = true;
         unsafe {
-            return sys::SteamAPI_ISteamNetworkingMessages_AcceptSessionWithUser(
+            return steam_api().SteamAPI_ISteamNetworkingMessages_AcceptSessionWithUser(
                 self.messages,
                 self.remote.as_ptr(),
             );
@@ -355,7 +357,7 @@ impl SessionRequest {
     /// Reject the connection without consuming self, useful for implementing [`Drop`]
     fn reject_inner(&mut self) {
         unsafe {
-            sys::SteamAPI_ISteamNetworkingMessages_CloseSessionWithUser(
+            steam_api().SteamAPI_ISteamNetworkingMessages_CloseSessionWithUser(
                 self.messages,
                 self.remote.as_ptr(),
             );

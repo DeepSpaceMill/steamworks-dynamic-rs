@@ -70,7 +70,7 @@ impl Server {
         let merged_versions_ptr = merged_versions.as_ptr().cast::<::std::os::raw::c_char>();
 
         return unsafe {
-            sys::SteamInternal_GameServer_Init_V2(
+            steam_api().SteamInternal_GameServer_Init_V2(
                 un_ip,
                 us_game_port,
                 us_query_port,
@@ -136,8 +136,8 @@ impl Server {
                 return Err(SteamAPIInitError::from_result_and_message(result, err_msg));
             }
 
-            sys::SteamAPI_ManualDispatch_Init();
-            let server_raw = sys::SteamAPI_SteamGameServer_v015();
+            steam_api().SteamAPI_ManualDispatch_Init();
+            let server_raw = steam_api().SteamAPI_SteamGameServer_v015();
             let server = Arc::new(Inner {
                 manager: Manager::Server,
                 callbacks: Callbacks {
@@ -207,7 +207,7 @@ impl Server {
 
     /// Returns the steam id of the current server
     pub fn steam_id(&self) -> SteamId {
-        unsafe { SteamId(sys::SteamAPI_ISteamGameServer_GetSteamID(self.server)) }
+        unsafe { SteamId(steam_api().SteamAPI_ISteamGameServer_GetSteamID(self.server)) }
     }
 
     /// Retrieve an authentication session ticket that can be sent
@@ -234,7 +234,7 @@ impl Server {
         unsafe {
             let mut ticket = vec![0; 1024];
             let mut ticket_len = 0;
-            let auth_ticket = sys::SteamAPI_ISteamGameServer_GetAuthSessionTicket(
+            let auth_ticket = steam_api().SteamAPI_ISteamGameServer_GetAuthSessionTicket(
                 self.server,
                 ticket.as_mut_ptr().cast(),
                 1024,
@@ -253,7 +253,7 @@ impl Server {
     /// the specified entity.
     pub fn cancel_authentication_ticket(&self, ticket: AuthTicket) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_CancelAuthTicket(self.server, ticket.0);
+            steam_api().SteamAPI_ISteamGameServer_CancelAuthTicket(self.server, ticket.0);
         }
     }
 
@@ -271,7 +271,7 @@ impl Server {
         ticket: &[u8],
     ) -> Result<(), AuthSessionError> {
         unsafe {
-            let res = sys::SteamAPI_ISteamGameServer_BeginAuthSession(
+            let res = steam_api().SteamAPI_ISteamGameServer_BeginAuthSession(
                 self.server,
                 ticket.as_ptr().cast(),
                 ticket.len() as _,
@@ -306,7 +306,7 @@ impl Server {
     /// the specified entity.
     pub fn end_authentication_session(&self, user: SteamId) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_EndAuthSession(self.server, user.0);
+            steam_api().SteamAPI_ISteamGameServer_EndAuthSession(self.server, user.0);
         }
     }
 
@@ -320,7 +320,7 @@ impl Server {
     /// Call this when a packet that starts with 0xFFFFFFFF comes in on the shared socket.
     pub fn handle_incoming_packet(&self, data: &[u8], addr: SocketAddrV4) -> bool {
         unsafe {
-            let result = sys::SteamAPI_ISteamGameServer_HandleIncomingPacket(
+            let result = steam_api().SteamAPI_ISteamGameServer_HandleIncomingPacket(
                 self.server,
                 data.as_ptr() as _,
                 data.len() as _,
@@ -345,7 +345,7 @@ impl Server {
             let mut port = 0u16;
 
             let len = unsafe {
-                sys::SteamAPI_ISteamGameServer_GetNextOutgoingPacket(
+                steam_api().SteamAPI_ISteamGameServer_GetNextOutgoingPacket(
                     self.server,
                     buffer.as_mut_ptr() as *mut _,
                     buffer.len() as _,
@@ -371,7 +371,7 @@ impl Server {
     pub fn set_product(&self, product: &str) {
         let product = CString::new(product).unwrap();
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetProduct(self.server, product.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_SetProduct(self.server, product.as_ptr());
         }
     }
 
@@ -382,7 +382,7 @@ impl Server {
     pub fn set_game_description(&self, desc: &str) {
         let desc = CString::new(desc).unwrap();
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetGameDescription(self.server, desc.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_SetGameDescription(self.server, desc.as_ptr());
         }
     }
 
@@ -396,21 +396,21 @@ impl Server {
     pub fn set_game_data(&self, data: &str) {
         let desc = CString::new(data).unwrap();
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetGameData(self.server, desc.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_SetGameData(self.server, desc.as_ptr());
         }
     }
 
     /// Sets whether this server is dedicated or a listen server.
     pub fn set_dedicated_server(&self, dedicated: bool) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetDedicatedServer(self.server, dedicated);
+            steam_api().SteamAPI_ISteamGameServer_SetDedicatedServer(self.server, dedicated);
         }
     }
 
     /// Login to a generic anonymous account
     pub fn log_on_anonymous(&self) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_LogOnAnonymous(self.server);
+            steam_api().SteamAPI_ISteamGameServer_LogOnAnonymous(self.server);
         }
     }
 
@@ -418,7 +418,7 @@ impl Server {
     pub fn log_on(&self, token: &str) {
         let token = CString::new(token).unwrap();
         unsafe {
-            sys::SteamAPI_ISteamGameServer_LogOn(self.server, token.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_LogOn(self.server, token.as_ptr());
         }
     }
 
@@ -426,7 +426,7 @@ impl Server {
     /// the steam matchmaking/server browser interfaces.
     pub fn enable_heartbeats(&self, active: bool) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetAdvertiseServerActive(self.server, active);
+            steam_api().SteamAPI_ISteamGameServer_SetAdvertiseServerActive(self.server, active);
         }
     }
 
@@ -448,7 +448,7 @@ impl Server {
     pub fn set_mod_dir(&self, mod_dir: &str) {
         let mod_dir = CString::new(mod_dir).unwrap();
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetModDir(self.server, mod_dir.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_SetModDir(self.server, mod_dir.as_ptr());
         }
     }
 
@@ -456,7 +456,7 @@ impl Server {
     pub fn set_map_name(&self, map_name: &str) {
         let map_name = CString::new(map_name).unwrap();
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetMapName(self.server, map_name.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_SetMapName(self.server, map_name.as_ptr());
         }
     }
 
@@ -464,7 +464,7 @@ impl Server {
     pub fn set_server_name(&self, server_name: &str) {
         let server_name = CString::new(server_name).unwrap();
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetServerName(self.server, server_name.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_SetServerName(self.server, server_name.as_ptr());
         }
     }
 
@@ -473,7 +473,7 @@ impl Server {
     /// This value may be changed at any time.
     pub fn set_max_players(&self, count: i32) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetMaxPlayerCount(self.server, count);
+            steam_api().SteamAPI_ISteamGameServer_SetMaxPlayerCount(self.server, count);
         }
     }
 
@@ -493,7 +493,7 @@ impl Server {
 
         let tags = CString::new(tags).unwrap();
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetGameTags(self.server, tags.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_SetGameTags(self.server, tags.as_ptr());
         }
     }
 
@@ -503,28 +503,33 @@ impl Server {
         let value = CString::new(value).unwrap();
 
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetKeyValue(self.server, key.as_ptr(), value.as_ptr());
+            steam_api().SteamAPI_ISteamGameServer_SetKeyValue(
+                self.server,
+                key.as_ptr(),
+                value.as_ptr(),
+            );
         }
     }
 
     /// Clears the whole list of key/values that are sent in rules queries.
     pub fn clear_all_key_values(&self) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_ClearAllKeyValues(self.server);
+            steam_api().SteamAPI_ISteamGameServer_ClearAllKeyValues(self.server);
         }
     }
 
     /// Let people know if your server will require a password
     pub fn set_password_protected(&self, b_password_protected: bool) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetPasswordProtected(self.server, b_password_protected);
+            steam_api()
+                .SteamAPI_ISteamGameServer_SetPasswordProtected(self.server, b_password_protected);
         }
     }
 
     /// Number of bots.  Default value is zero
     pub fn set_bot_player_count(&self, c_bot_players: i32) {
         unsafe {
-            sys::SteamAPI_ISteamGameServer_SetBotPlayerCount(self.server, c_bot_players);
+            steam_api().SteamAPI_ISteamGameServer_SetBotPlayerCount(self.server, c_bot_players);
         }
     }
 
@@ -533,7 +538,7 @@ impl Server {
     /// **For this to work properly, you need to call `UGC::init_for_game_server()`!**
     pub fn ugc(&self) -> UGC {
         unsafe {
-            let ugc = sys::SteamAPI_SteamGameServerUGC_v021();
+            let ugc = steam_api().SteamAPI_SteamGameServerUGC_v021();
             debug_assert!(!ugc.is_null());
             UGC {
                 ugc,
@@ -545,7 +550,7 @@ impl Server {
     /// Returns an accessor to the steam utils interface
     pub fn utils(&self) -> Utils {
         unsafe {
-            let utils = sys::SteamAPI_SteamGameServerUtils_v010();
+            let utils = steam_api().SteamAPI_SteamGameServerUtils_v010();
             debug_assert!(!utils.is_null());
             Utils {
                 utils: utils,
@@ -557,7 +562,7 @@ impl Server {
     /// Returns an accessor to the steam networking interface
     pub fn networking(&self) -> Networking {
         unsafe {
-            let net = sys::SteamAPI_SteamGameServerNetworking_v006();
+            let net = steam_api().SteamAPI_SteamGameServerNetworking_v006();
             debug_assert!(!net.is_null());
             Networking {
                 net: net,
@@ -568,7 +573,7 @@ impl Server {
 
     pub fn networking_messages(&self) -> networking_messages::NetworkingMessages {
         unsafe {
-            let net = sys::SteamAPI_SteamGameServerNetworkingMessages_SteamAPI_v002();
+            let net = steam_api().SteamAPI_SteamGameServerNetworkingMessages_SteamAPI_v002();
             debug_assert!(!net.is_null());
             networking_messages::NetworkingMessages {
                 net,
@@ -579,7 +584,7 @@ impl Server {
 
     pub fn networking_sockets(&self) -> networking_sockets::NetworkingSockets {
         unsafe {
-            let sockets = sys::SteamAPI_SteamGameServerNetworkingSockets_SteamAPI_v012();
+            let sockets = steam_api().SteamAPI_SteamGameServerNetworkingSockets_SteamAPI_v012();
             debug_assert!(!sockets.is_null());
             networking_sockets::NetworkingSockets {
                 sockets,

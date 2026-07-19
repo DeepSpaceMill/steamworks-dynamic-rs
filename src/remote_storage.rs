@@ -54,7 +54,7 @@ impl RemoteStorage {
     /// Toggles whether the steam cloud is enabled for the application
     pub fn set_cloud_enabled_for_app(&self, enabled: bool) {
         unsafe {
-            sys::SteamAPI_ISteamRemoteStorage_SetCloudEnabledForApp(self.rs, enabled);
+            steam_api().SteamAPI_ISteamRemoteStorage_SetCloudEnabledForApp(self.rs, enabled);
         }
     }
 
@@ -64,7 +64,7 @@ impl RemoteStorage {
     ///
     /// This is independent from the account wide setting
     pub fn is_cloud_enabled_for_app(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamRemoteStorage_IsCloudEnabledForApp(self.rs) }
+        unsafe { steam_api().SteamAPI_ISteamRemoteStorage_IsCloudEnabledForApp(self.rs) }
     }
 
     /// Returns whether the steam cloud is enabled for the account
@@ -73,22 +73,23 @@ impl RemoteStorage {
     ///
     /// This is independent from the application setting
     pub fn is_cloud_enabled_for_account(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamRemoteStorage_IsCloudEnabledForAccount(self.rs) }
+        unsafe { steam_api().SteamAPI_ISteamRemoteStorage_IsCloudEnabledForAccount(self.rs) }
     }
 
     /// Returns information about all files in the cloud storage
     pub fn files(&self) -> Vec<SteamFileInfo> {
         unsafe {
-            let count = sys::SteamAPI_ISteamRemoteStorage_GetFileCount(self.rs);
+            let count = steam_api().SteamAPI_ISteamRemoteStorage_GetFileCount(self.rs);
             if count == -1 {
                 return Vec::new();
             }
             let mut files = Vec::with_capacity(count as usize);
             for idx in 0..count {
                 let mut size = 0;
-                let name = CStr::from_ptr(sys::SteamAPI_ISteamRemoteStorage_GetFileNameAndSize(
-                    self.rs, idx, &mut size,
-                ));
+                let name = CStr::from_ptr(
+                    steam_api()
+                        .SteamAPI_ISteamRemoteStorage_GetFileNameAndSize(self.rs, idx, &mut size),
+                );
                 files.push(SteamFileInfo {
                     name: name.to_string_lossy().into_owned(),
                     size: size as u64,
@@ -148,34 +149,38 @@ impl SteamFile {
     ///
     /// Returns whether a file was actually deleted
     pub fn delete(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamRemoteStorage_FileDelete(self.rs, self.name.as_ptr()) }
+        unsafe { steam_api().SteamAPI_ISteamRemoteStorage_FileDelete(self.rs, self.name.as_ptr()) }
     }
     /// Deletes the file remotely whilst keeping it locally.
     ///
     /// Returns whether a file was actually forgotten
     pub fn forget(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamRemoteStorage_FileForget(self.rs, self.name.as_ptr()) }
+        unsafe { steam_api().SteamAPI_ISteamRemoteStorage_FileForget(self.rs, self.name.as_ptr()) }
     }
 
     /// Returns whether a file exists
     pub fn exists(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamRemoteStorage_FileExists(self.rs, self.name.as_ptr()) }
+        unsafe { steam_api().SteamAPI_ISteamRemoteStorage_FileExists(self.rs, self.name.as_ptr()) }
     }
 
     /// Returns whether a file is persisted in the steam cloud
     pub fn is_persisted(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamRemoteStorage_FilePersisted(self.rs, self.name.as_ptr()) }
+        unsafe {
+            steam_api().SteamAPI_ISteamRemoteStorage_FilePersisted(self.rs, self.name.as_ptr())
+        }
     }
 
     /// Returns the timestamp of the file
     pub fn timestamp(&self) -> i64 {
-        unsafe { sys::SteamAPI_ISteamRemoteStorage_GetFileTimestamp(self.rs, self.name.as_ptr()) }
+        unsafe {
+            steam_api().SteamAPI_ISteamRemoteStorage_GetFileTimestamp(self.rs, self.name.as_ptr())
+        }
     }
 
     /// Set which platforms the file should be available on
     pub fn set_sync_platforms(&self, platforms: RemoteStoragePlatforms) {
         unsafe {
-            sys::SteamAPI_ISteamRemoteStorage_SetSyncPlatforms(
+            steam_api().SteamAPI_ISteamRemoteStorage_SetSyncPlatforms(
                 self.rs,
                 self.name.as_ptr(),
                 platforms.into(),
@@ -186,15 +191,15 @@ impl SteamFile {
     /// Returns the platforms the file is available on
     pub fn get_sync_platforms(&self) -> RemoteStoragePlatforms {
         let bits = unsafe {
-            sys::SteamAPI_ISteamRemoteStorage_GetSyncPlatforms(self.rs, self.name.as_ptr())
+            steam_api().SteamAPI_ISteamRemoteStorage_GetSyncPlatforms(self.rs, self.name.as_ptr())
         };
         RemoteStoragePlatforms::from_bits_truncate(bits.0 as _)
     }
 
     pub fn write(self) -> SteamFileWriter {
         unsafe {
-            let handle =
-                sys::SteamAPI_ISteamRemoteStorage_FileWriteStreamOpen(self.rs, self.name.as_ptr());
+            let handle = steam_api()
+                .SteamAPI_ISteamRemoteStorage_FileWriteStreamOpen(self.rs, self.name.as_ptr());
             SteamFileWriter { file: self, handle }
         }
     }
@@ -203,7 +208,8 @@ impl SteamFile {
         unsafe {
             SteamFileReader {
                 offset: 0,
-                size: sys::SteamAPI_ISteamRemoteStorage_GetFileSize(self.rs, self.name.as_ptr())
+                size: steam_api()
+                    .SteamAPI_ISteamRemoteStorage_GetFileSize(self.rs, self.name.as_ptr())
                     as usize,
                 file: self,
             }
@@ -211,8 +217,9 @@ impl SteamFile {
     }
 
     pub fn share(&self, cb: impl FnOnce(Result<u64, SteamError>) + 'static + Send) {
-        let api_call =
-            unsafe { sys::SteamAPI_ISteamRemoteStorage_FileShare(self.rs, self.name.as_ptr()) };
+        let api_call = unsafe {
+            steam_api().SteamAPI_ISteamRemoteStorage_FileShare(self.rs, self.name.as_ptr())
+        };
         unsafe {
             register_call_result::<sys::RemoteStorageFileShareResult_t, _>(
                 &self._inner,
@@ -239,7 +246,7 @@ pub struct SteamFileWriter {
 impl std::io::Write for SteamFileWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         unsafe {
-            if sys::SteamAPI_ISteamRemoteStorage_FileWriteStreamWriteChunk(
+            if steam_api().SteamAPI_ISteamRemoteStorage_FileWriteStreamWriteChunk(
                 self.file.rs,
                 self.handle,
                 buf.as_ptr().cast(),
@@ -260,7 +267,8 @@ impl std::io::Write for SteamFileWriter {
 impl Drop for SteamFileWriter {
     fn drop(&mut self) {
         unsafe {
-            sys::SteamAPI_ISteamRemoteStorage_FileWriteStreamClose(self.file.rs, self.handle);
+            steam_api()
+                .SteamAPI_ISteamRemoteStorage_FileWriteStreamClose(self.file.rs, self.handle);
         }
     }
 }
@@ -280,7 +288,7 @@ impl std::io::Read for SteamFileReader {
         }
         let len = min(buf.len(), self.size - self.offset);
         unsafe {
-            let api_call = sys::SteamAPI_ISteamRemoteStorage_FileReadAsync(
+            let api_call = steam_api().SteamAPI_ISteamRemoteStorage_FileReadAsync(
                 self.file.rs,
                 self.file.name.as_ptr(),
                 self.offset as _,
@@ -288,7 +296,7 @@ impl std::io::Read for SteamFileReader {
             );
 
             let mut failed = false;
-            while !sys::SteamAPI_ISteamUtils_IsAPICallCompleted(
+            while !steam_api().SteamAPI_ISteamUtils_IsAPICallCompleted(
                 self.file.util,
                 api_call,
                 &mut failed,
@@ -299,7 +307,7 @@ impl std::io::Read for SteamFileReader {
                 return Err(std::io::ErrorKind::Other.into());
             }
             let mut callback: sys::RemoteStorageFileReadAsyncComplete_t = std::mem::zeroed();
-            sys::SteamAPI_ISteamUtils_GetAPICallResult(
+            steam_api().SteamAPI_ISteamUtils_GetAPICallResult(
                 self.file.util,
                 api_call,
                 (&mut callback) as *mut _ as *mut _,
@@ -312,7 +320,7 @@ impl std::io::Read for SteamFileReader {
                 return Err(std::io::ErrorKind::Other.into());
             }
             let size = callback.m_cubRead as usize;
-            sys::SteamAPI_ISteamRemoteStorage_FileReadAsyncComplete(
+            steam_api().SteamAPI_ISteamRemoteStorage_FileReadAsyncComplete(
                 self.file.rs,
                 callback.m_hFileReadAsync,
                 buf.as_mut_ptr().cast(),

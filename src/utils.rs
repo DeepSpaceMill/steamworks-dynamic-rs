@@ -130,13 +130,13 @@ unsafe extern "C" fn c_warning_callback(level: i32, msg: *const c_char) {
 impl Utils {
     /// Returns the app ID of the current process
     pub fn app_id(&self) -> AppId {
-        unsafe { AppId(sys::SteamAPI_ISteamUtils_GetAppID(self.utils)) }
+        unsafe { AppId(steam_api().SteamAPI_ISteamUtils_GetAppID(self.utils)) }
     }
 
     /// Returns the country code of the current user based on their IP
     pub fn ip_country(&self) -> String {
         unsafe {
-            let ipcountry = sys::SteamAPI_ISteamUtils_GetIPCountry(self.utils);
+            let ipcountry = steam_api().SteamAPI_ISteamUtils_GetIPCountry(self.utils);
             let ipcountry = CStr::from_ptr(ipcountry);
             ipcountry.to_string_lossy().into_owned()
         }
@@ -144,7 +144,7 @@ impl Utils {
 
     /// Returns whether or not the overlay is enabled in Steam
     pub fn is_overlay_enabled(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamUtils_IsOverlayEnabled(self.utils) }
+        unsafe { steam_api().SteamAPI_ISteamUtils_IsOverlayEnabled(self.utils) }
     }
 
     /// Returns the language the steam client is currently
@@ -153,7 +153,7 @@ impl Utils {
     /// Generally you want `Apps::current_game_language` instead of this
     pub fn ui_language(&self) -> String {
         unsafe {
-            let lang = sys::SteamAPI_ISteamUtils_GetSteamUILanguage(self.utils);
+            let lang = steam_api().SteamAPI_ISteamUtils_GetSteamUILanguage(self.utils);
             let lang = CStr::from_ptr(lang);
             lang.to_string_lossy().into_owned()
         }
@@ -162,7 +162,7 @@ impl Utils {
     /// Returns the current real time on the Steam servers
     /// in Unix epoch format (seconds since 1970/1/1 UTC).
     pub fn get_server_real_time(&self) -> u32 {
-        unsafe { sys::SteamAPI_ISteamUtils_GetServerRealTime(self.utils) }
+        unsafe { steam_api().SteamAPI_ISteamUtils_GetServerRealTime(self.utils) }
     }
 
     /// Sets the position on the screen where popups from the steam overlay
@@ -179,7 +179,7 @@ impl Utils {
                     sys::ENotificationPosition::k_EPositionBottomRight
                 }
             };
-            sys::SteamAPI_ISteamUtils_SetOverlayNotificationPosition(self.utils, position);
+            steam_api().SteamAPI_ISteamUtils_SetOverlayNotificationPosition(self.utils, position);
         }
     }
 
@@ -198,7 +198,8 @@ impl Utils {
             .expect("warning func lock poisoned");
         *lock = Some(Box::new(cb));
         unsafe {
-            sys::SteamAPI_ISteamUtils_SetWarningMessageHook(self.utils, Some(c_warning_callback));
+            steam_api()
+                .SteamAPI_ISteamUtils_SetWarningMessageHook(self.utils, Some(c_warning_callback));
         }
     }
 
@@ -214,12 +215,13 @@ impl Utils {
             let len = dismissed_data.submitted_text_len?;
             let mut buf = vec![0u8; len as usize];
 
-            sys::SteamAPI_ISteamUtils_GetEnteredGamepadTextInput(
-                self.utils,
-                buf.as_mut_ptr().cast(),
-                len,
-            )
-            .then(|| String::from_utf8(buf).expect("Steamworks returned invalid UTF-8 string"))
+            steam_api()
+                .SteamAPI_ISteamUtils_GetEnteredGamepadTextInput(
+                    self.utils,
+                    buf.as_mut_ptr().cast(),
+                    len,
+                )
+                .then(|| String::from_utf8(buf).expect("Steamworks returned invalid UTF-8 string"))
         }
     }
 
@@ -228,12 +230,12 @@ impl Utils {
     /// Games must be launched through the Steam client to enable the Big Picture overlay.
     /// During development, a game can be added as a non-steam game to the developer's library to test this feature.
     pub fn is_steam_in_big_picture_mode(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamUtils_IsSteamInBigPictureMode(self.utils) }
+        unsafe { steam_api().SteamAPI_ISteamUtils_IsSteamInBigPictureMode(self.utils) }
     }
 
     /// Checks if Steam is running on a Steam Deck device.
     pub fn is_steam_running_on_steam_deck(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck(self.utils) }
+        unsafe { steam_api().SteamAPI_ISteamUtils_IsSteamRunningOnSteamDeck(self.utils) }
     }
 
     /// Activates the Big Picture text input dialog which only supports gamepad input.
@@ -253,7 +255,7 @@ impl Utils {
             let description = CString::new(description).unwrap();
             let existing_text = existing_text.map(|s| CString::new(s).unwrap());
             std::mem::forget(register_callback(&self._inner, dismissed_cb));
-            sys::SteamAPI_ISteamUtils_ShowGamepadTextInput(
+            steam_api().SteamAPI_ISteamUtils_ShowGamepadTextInput(
                 self.utils,
                 input_mode.into(),
                 input_line_mode.into(),
@@ -292,7 +294,7 @@ impl Utils {
                     dismissed_cb();
                 },
             ));
-            sys::SteamAPI_ISteamUtils_ShowFloatingGamepadTextInput(
+            steam_api().SteamAPI_ISteamUtils_ShowFloatingGamepadTextInput(
                 self.utils,
                 keyboard_mode.into(),
                 x,

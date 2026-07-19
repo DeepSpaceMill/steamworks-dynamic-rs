@@ -66,7 +66,7 @@ impl Timeline {
         }
 
         unsafe {
-            sys::SteamAPI_ISteamTimeline_SetTimelineGameMode(self.timeline, mode.into());
+            steam_api().SteamAPI_ISteamTimeline_SetTimelineGameMode(self.timeline, mode.into());
         }
     }
 
@@ -81,7 +81,7 @@ impl Timeline {
         let description = CString::new(description).unwrap();
 
         unsafe {
-            sys::SteamAPI_ISteamTimeline_SetTimelineTooltip(
+            steam_api().SteamAPI_ISteamTimeline_SetTimelineTooltip(
                 self.timeline,
                 description.as_ptr(),
                 duration.as_secs_f32(),
@@ -96,7 +96,8 @@ impl Timeline {
         }
 
         unsafe {
-            sys::SteamAPI_ISteamTimeline_ClearTimelineTooltip(self.timeline, duration.as_secs_f32())
+            steam_api()
+                .SteamAPI_ISteamTimeline_ClearTimelineTooltip(self.timeline, duration.as_secs_f32())
         }
     }
 
@@ -123,7 +124,7 @@ impl Timeline {
         let duration = duration.as_secs_f32();
 
         unsafe {
-            let _handle = sys::SteamAPI_ISteamTimeline_AddRangeTimelineEvent(
+            let _handle = steam_api().SteamAPI_ISteamTimeline_AddRangeTimelineEvent(
                 self.timeline,
                 icon.as_ptr(),
                 title.as_ptr(),

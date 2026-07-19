@@ -109,12 +109,12 @@ impl Networking {
     ///
     /// Should only be called in response to a `P2PSessionRequest`.
     pub fn accept_p2p_session(&self, user: SteamId) -> bool {
-        unsafe { sys::SteamAPI_ISteamNetworking_AcceptP2PSessionWithUser(self.net, user.0) }
+        unsafe { steam_api().SteamAPI_ISteamNetworking_AcceptP2PSessionWithUser(self.net, user.0) }
     }
 
     /// Closes the p2p connection between the given user
     pub fn close_p2p_session(&self, user: SteamId) -> bool {
-        unsafe { sys::SteamAPI_ISteamNetworking_CloseP2PSessionWithUser(self.net, user.0) }
+        unsafe { steam_api().SteamAPI_ISteamNetworking_CloseP2PSessionWithUser(self.net, user.0) }
     }
 
     /// Gets the connection state to the specified user
@@ -124,7 +124,9 @@ impl Networking {
     pub fn get_p2p_session_state(&self, user: SteamId) -> Option<P2PSessionState> {
         unsafe {
             let mut state: sys::P2PSessionState_t = std::mem::zeroed();
-            if sys::SteamAPI_ISteamNetworking_GetP2PSessionState(self.net, user.0, &mut state) {
+            if steam_api()
+                .SteamAPI_ISteamNetworking_GetP2PSessionState(self.net, user.0, &mut state)
+            {
                 Some(P2PSessionState {
                     connection_active: state.m_bConnectionActive != 0,
                     connecting: state.m_bConnecting != 0,
@@ -162,7 +164,7 @@ impl Networking {
                 SendType::Reliable => sys::EP2PSend::k_EP2PSendReliable,
                 SendType::ReliableWithBuffering => sys::EP2PSend::k_EP2PSendReliableWithBuffering,
             };
-            sys::SteamAPI_ISteamNetworking_SendP2PPacket(
+            steam_api().SteamAPI_ISteamNetworking_SendP2PPacket(
                 self.net,
                 remote.0,
                 data.as_ptr().cast(),
@@ -184,7 +186,9 @@ impl Networking {
     pub fn is_p2p_packet_available_on_channel(&self, channel: i32) -> Option<usize> {
         unsafe {
             let mut size = 0;
-            if sys::SteamAPI_ISteamNetworking_IsP2PPacketAvailable(self.net, &mut size, channel) {
+            if steam_api()
+                .SteamAPI_ISteamNetworking_IsP2PPacketAvailable(self.net, &mut size, channel)
+            {
                 Some(size as usize)
             } else {
                 None
@@ -211,7 +215,7 @@ impl Networking {
         unsafe {
             let mut size = 0;
             let mut remote = 0;
-            if sys::SteamAPI_ISteamNetworking_ReadP2PPacket(
+            if steam_api().SteamAPI_ISteamNetworking_ReadP2PPacket(
                 self.net,
                 buf.as_mut_ptr().cast(),
                 buf.len() as _,

@@ -150,7 +150,7 @@ macro_rules! gen_server_list_fn {
                 let request_arc = ServerListRequest::get(callbacks);
                 let mut request = request_arc.lock().unwrap();
 
-                let handle = sys::$sys_method(
+                let handle = steam_api().$sys_method(
                     self.mms,
                     app_id,
                     &mut filters.as_mut_ptr().cast(),
@@ -347,12 +347,12 @@ impl ServerListRequest {
             if self.released {
                 return Err(ReleaseError::Released);
             }
-            if sys::SteamAPI_ISteamMatchmakingServers_IsRefreshing(self.mms, self.h_req) {
+            if steam_api().SteamAPI_ISteamMatchmakingServers_IsRefreshing(self.mms, self.h_req) {
                 return Err(ReleaseError::Refreshing);
             }
 
             self.released = true;
-            sys::SteamAPI_ISteamMatchmakingServers_ReleaseRequest(self.mms, self.h_req);
+            steam_api().SteamAPI_ISteamMatchmakingServers_ReleaseRequest(self.mms, self.h_req);
 
             free_serverlist(self.real);
 
@@ -375,9 +375,7 @@ impl ServerListRequest {
         unsafe {
             self.released()?;
 
-            Ok(sys::SteamAPI_ISteamMatchmakingServers_GetServerCount(
-                self.mms, self.h_req,
-            ))
+            Ok(steam_api().SteamAPI_ISteamMatchmakingServers_GetServerCount(self.mms, self.h_req))
         }
     }
 
@@ -389,9 +387,8 @@ impl ServerListRequest {
             self.released()?;
 
             // Should we then free this pointer?
-            let server_item = sys::SteamAPI_ISteamMatchmakingServers_GetServerDetails(
-                self.mms, self.h_req, server,
-            );
+            let server_item = steam_api()
+                .SteamAPI_ISteamMatchmakingServers_GetServerDetails(self.mms, self.h_req, server);
 
             Ok(GameServerItem::from_ptr(server_item))
         }
@@ -404,7 +401,7 @@ impl ServerListRequest {
         unsafe {
             self.released()?;
 
-            sys::SteamAPI_ISteamMatchmakingServers_RefreshQuery(self.mms, self.h_req);
+            steam_api().SteamAPI_ISteamMatchmakingServers_RefreshQuery(self.mms, self.h_req);
 
             Ok(())
         }
@@ -417,7 +414,8 @@ impl ServerListRequest {
         unsafe {
             self.released()?;
 
-            sys::SteamAPI_ISteamMatchmakingServers_RefreshServer(self.mms, self.h_req, server);
+            steam_api()
+                .SteamAPI_ISteamMatchmakingServers_RefreshServer(self.mms, self.h_req, server);
 
             Ok(())
         }
@@ -430,9 +428,7 @@ impl ServerListRequest {
         unsafe {
             self.released()?;
 
-            Ok(sys::SteamAPI_ISteamMatchmakingServers_IsRefreshing(
-                self.mms, self.h_req,
-            ))
+            Ok(steam_api().SteamAPI_ISteamMatchmakingServers_IsRefreshing(self.mms, self.h_req))
         }
     }
 }
@@ -448,7 +444,7 @@ impl MatchmakingServers {
         unsafe {
             let callbacks = create_ping(callbacks);
 
-            sys::SteamAPI_ISteamMatchmakingServers_PingServer(
+            steam_api().SteamAPI_ISteamMatchmakingServers_PingServer(
                 self.mms,
                 ip.into(),
                 port,
@@ -466,7 +462,7 @@ impl MatchmakingServers {
         unsafe {
             let callbacks = create_playerdetails(callbacks);
 
-            sys::SteamAPI_ISteamMatchmakingServers_PlayerDetails(
+            steam_api().SteamAPI_ISteamMatchmakingServers_PlayerDetails(
                 self.mms,
                 ip.into(),
                 port,
@@ -479,7 +475,7 @@ impl MatchmakingServers {
         unsafe {
             let callbacks = create_serverrules(callbacks);
 
-            sys::SteamAPI_ISteamMatchmakingServers_ServerRules(
+            steam_api().SteamAPI_ISteamMatchmakingServers_ServerRules(
                 self.mms,
                 ip.into(),
                 port,
@@ -508,7 +504,7 @@ impl MatchmakingServers {
             let request_arc = ServerListRequest::get(callbacks);
             let mut request = request_arc.lock().unwrap();
 
-            let handle = sys::SteamAPI_ISteamMatchmakingServers_RequestLANServerList(
+            let handle = steam_api().SteamAPI_ISteamMatchmakingServers_RequestLANServerList(
                 self.mms,
                 app_id,
                 callbacks.cast(),

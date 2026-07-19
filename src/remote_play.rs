@@ -18,11 +18,11 @@ impl RemotePlay {
     /// Return a list of all active Remote Play sessions
     pub fn sessions(&self) -> Vec<RemotePlaySession> {
         unsafe {
-            let count = sys::SteamAPI_ISteamRemotePlay_GetSessionCount(self.rp);
+            let count = steam_api().SteamAPI_ISteamRemotePlay_GetSessionCount(self.rp);
             let mut sessions = Vec::with_capacity(count as usize);
 
             for i in 0..count {
-                let id = sys::SteamAPI_ISteamRemotePlay_GetSessionID(self.rp, i as i32);
+                let id = steam_api().SteamAPI_ISteamRemotePlay_GetSessionID(self.rp, i as i32);
 
                 // Session might be invalid if it ended after GetSessionCount
                 if id == 0 {
@@ -87,18 +87,18 @@ impl RemotePlaySession {
     /// Playing Together.
     pub fn user(&self) -> SteamId {
         unsafe {
-            SteamId(sys::SteamAPI_ISteamRemotePlay_GetSessionSteamID(
-                self.rp,
-                self.session.raw(),
-            ))
+            SteamId(
+                steam_api()
+                    .SteamAPI_ISteamRemotePlay_GetSessionSteamID(self.rp, self.session.raw()),
+            )
         }
     }
 
     /// Gets the client device name for this session. Returns `None` if the session has expired
     pub fn client_name(&self) -> Option<String> {
         unsafe {
-            let name =
-                sys::SteamAPI_ISteamRemotePlay_GetSessionClientName(self.rp, self.session.raw());
+            let name = steam_api()
+                .SteamAPI_ISteamRemotePlay_GetSessionClientName(self.rp, self.session.raw());
 
             if name.is_null() {
                 return None;
@@ -114,10 +114,9 @@ impl RemotePlaySession {
     pub fn client_form_factor(&self) -> Option<SteamDeviceFormFactor> {
         unsafe {
             use SteamDeviceFormFactor::*;
-            match sys::SteamAPI_ISteamRemotePlay_GetSessionClientFormFactor(
-                self.rp,
-                self.session.raw(),
-            ) {
+            match steam_api()
+                .SteamAPI_ISteamRemotePlay_GetSessionClientFormFactor(self.rp, self.session.raw())
+            {
                 sys::ESteamDeviceFormFactor::k_ESteamDeviceFormFactorPhone => Some(Phone),
                 sys::ESteamDeviceFormFactor::k_ESteamDeviceFormFactorTablet => Some(Tablet),
                 sys::ESteamDeviceFormFactor::k_ESteamDeviceFormFactorComputer => Some(Computer),
@@ -133,20 +132,22 @@ impl RemotePlaySession {
             let mut width = 0;
             let mut height = 0;
 
-            sys::SteamAPI_ISteamRemotePlay_BGetSessionClientResolution(
-                self.rp,
-                self.session.raw(),
-                &mut width,
-                &mut height,
-            )
-            .then_some((width as u32, height as u32))
+            steam_api()
+                .SteamAPI_ISteamRemotePlay_BGetSessionClientResolution(
+                    self.rp,
+                    self.session.raw(),
+                    &mut width,
+                    &mut height,
+                )
+                .then_some((width as u32, height as u32))
         }
     }
 
     /// Invites a friend to join the game using Remote Play Together
     pub fn invite(&self, friend: SteamId) -> bool {
         unsafe {
-            sys::SteamAPI_ISteamRemotePlay_BSendRemotePlayTogetherInvite(self.rp, friend.raw())
+            steam_api()
+                .SteamAPI_ISteamRemotePlay_BSendRemotePlayTogetherInvite(self.rp, friend.raw())
         }
     }
 }

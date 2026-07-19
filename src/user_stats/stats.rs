@@ -33,7 +33,7 @@ impl AchievementHelper<'_> {
     pub fn get(&self) -> Result<bool, ()> {
         unsafe {
             let mut achieved = false;
-            let success = sys::SteamAPI_ISteamUserStats_GetAchievement(
+            let success = steam_api().SteamAPI_ISteamUserStats_GetAchievement(
                 self.parent.user_stats,
                 self.name.as_ptr(),
                 &mut achieved,
@@ -56,7 +56,8 @@ impl AchievementHelper<'_> {
     /// [`UserStatsReceived`](../struct.UserStatsReceived.html).
     pub fn set(&self) -> Result<(), ()> {
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_SetAchievement(self.parent.user_stats, self.name.as_ptr())
+            steam_api()
+                .SteamAPI_ISteamUserStats_SetAchievement(self.parent.user_stats, self.name.as_ptr())
         };
         if success {
             Ok(())
@@ -75,7 +76,7 @@ impl AchievementHelper<'_> {
     /// [`UserStatsReceived`](../struct.UserStatsReceived.html).
     pub fn clear(&self) -> Result<(), ()> {
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_ClearAchievement(
+            steam_api().SteamAPI_ISteamUserStats_ClearAchievement(
                 self.parent.user_stats,
                 self.name.as_ptr(),
             )
@@ -117,7 +118,7 @@ impl AchievementHelper<'_> {
     pub fn get_achievement_achieved_percent(&self) -> Result<f32, ()> {
         unsafe {
             let mut percent = 0.0;
-            let success = sys::SteamAPI_ISteamUserStats_GetAchievementAchievedPercent(
+            let success = steam_api().SteamAPI_ISteamUserStats_GetAchievementAchievedPercent(
                 self.parent.user_stats,
                 self.name.as_ptr(),
                 &mut percent,
@@ -143,7 +144,7 @@ impl AchievementHelper<'_> {
         let mut unlocktime = 0u32;
 
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_GetAchievementAndUnlockTime(
+            steam_api().SteamAPI_ISteamUserStats_GetAchievementAndUnlockTime(
                 self.parent.user_stats,
                 self.name.as_ptr(),
                 &mut achieved,
@@ -194,7 +195,7 @@ impl AchievementHelper<'_> {
         unsafe {
             let key_c_str = CString::new(key).expect("Failed to create c_str from key parameter");
 
-            let str = sys::SteamAPI_ISteamUserStats_GetAchievementDisplayAttribute(
+            let str = steam_api().SteamAPI_ISteamUserStats_GetAchievementDisplayAttribute(
                 self.parent.user_stats,
                 self.name.as_ptr(),
                 key_c_str.as_ptr(),
@@ -224,8 +225,8 @@ impl AchievementHelper<'_> {
 
     fn internal_get_achievement_icon(&self, avoid_big_icons: bool) -> Option<(Vec<u8>, u32, u32)> {
         unsafe {
-            let utils: *mut sys::ISteamUtils = sys::SteamAPI_SteamUtils_v010();
-            let img = sys::SteamAPI_ISteamUserStats_GetAchievementIcon(
+            let utils: *mut sys::ISteamUtils = steam_api().SteamAPI_SteamUtils_v010();
+            let img = steam_api().SteamAPI_ISteamUserStats_GetAchievementIcon(
                 self.parent.user_stats,
                 self.name.as_ptr(),
             );
@@ -234,14 +235,14 @@ impl AchievementHelper<'_> {
             }
             let mut width = 0;
             let mut height = 0;
-            if !sys::SteamAPI_ISteamUtils_GetImageSize(utils, img, &mut width, &mut height) {
+            if !steam_api().SteamAPI_ISteamUtils_GetImageSize(utils, img, &mut width, &mut height) {
                 return None;
             }
             if avoid_big_icons && (width != 64 || height != 64) {
                 return None;
             }
             let mut dest = vec![0; (width * height * 4).try_into().unwrap()];
-            if !sys::SteamAPI_ISteamUtils_GetImageRGBA(
+            if !steam_api().SteamAPI_ISteamUtils_GetImageRGBA(
                 utils,
                 img,
                 dest.as_mut_ptr(),

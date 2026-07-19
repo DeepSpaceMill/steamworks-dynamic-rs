@@ -19,8 +19,8 @@ impl UserStats {
     {
         unsafe {
             let name = CString::new(name).unwrap();
-            let api_call =
-                sys::SteamAPI_ISteamUserStats_FindLeaderboard(self.user_stats, name.as_ptr());
+            let api_call = steam_api()
+                .SteamAPI_ISteamUserStats_FindLeaderboard(self.user_stats, name.as_ptr());
             register_call_result::<sys::LeaderboardFindResult_t, _>(
                 &self.inner,
                 api_call,
@@ -72,7 +72,7 @@ impl UserStats {
                 }
             };
 
-            let api_call = sys::SteamAPI_ISteamUserStats_FindOrCreateLeaderboard(
+            let api_call = steam_api().SteamAPI_ISteamUserStats_FindOrCreateLeaderboard(
                 self.user_stats,
                 name.as_ptr(),
                 sort_method,
@@ -115,7 +115,7 @@ impl UserStats {
                     sys::ELeaderboardUploadScoreMethod::k_ELeaderboardUploadScoreMethodForceUpdate
                 }
             };
-            let api_call = sys::SteamAPI_ISteamUserStats_UploadLeaderboardScore(
+            let api_call = steam_api().SteamAPI_ISteamUserStats_UploadLeaderboardScore(
                 self.user_stats,
                 leaderboard.0,
                 method,
@@ -169,7 +169,7 @@ impl UserStats {
                     sys::ELeaderboardDataRequest::k_ELeaderboardDataRequestFriends
                 }
             };
-            let api_call = sys::SteamAPI_ISteamUserStats_DownloadLeaderboardEntries(
+            let api_call = steam_api().SteamAPI_ISteamUserStats_DownloadLeaderboardEntries(
                 self.user_stats,
                 leaderboard.0,
                 request,
@@ -190,7 +190,7 @@ impl UserStats {
                             let mut entry: sys::LeaderboardEntry_t = std::mem::zeroed();
                             let mut details = Vec::with_capacity(max_details_len);
 
-                            sys::SteamAPI_ISteamUserStats_GetDownloadedLeaderboardEntry(
+                            steam_api().SteamAPI_ISteamUserStats_GetDownloadedLeaderboardEntry(
                                 user_stats as *mut _,
                                 v.m_hSteamLeaderboardEntries,
                                 idx,
@@ -224,10 +224,9 @@ impl UserStats {
         leaderboard: &Leaderboard,
     ) -> Option<LeaderboardDisplayType> {
         unsafe {
-            match sys::SteamAPI_ISteamUserStats_GetLeaderboardDisplayType(
-                self.user_stats,
-                leaderboard.0,
-            ) {
+            match steam_api()
+                .SteamAPI_ISteamUserStats_GetLeaderboardDisplayType(self.user_stats, leaderboard.0)
+            {
                 sys::ELeaderboardDisplayType::k_ELeaderboardDisplayTypeNumeric => {
                     Some(LeaderboardDisplayType::Numeric)
                 }
@@ -248,10 +247,9 @@ impl UserStats {
         leaderboard: &Leaderboard,
     ) -> Option<LeaderboardSortMethod> {
         unsafe {
-            match sys::SteamAPI_ISteamUserStats_GetLeaderboardSortMethod(
-                self.user_stats,
-                leaderboard.0,
-            ) {
+            match steam_api()
+                .SteamAPI_ISteamUserStats_GetLeaderboardSortMethod(self.user_stats, leaderboard.0)
+            {
                 sys::ELeaderboardSortMethod::k_ELeaderboardSortMethodAscending => {
                     Some(LeaderboardSortMethod::Ascending)
                 }
@@ -266,10 +264,10 @@ impl UserStats {
     /// Returns the name of a leaderboard handle. Returns an empty string if the leaderboard handle is invalid.
     pub fn get_leaderboard_name(&self, leaderboard: &Leaderboard) -> String {
         unsafe {
-            let name = CStr::from_ptr(sys::SteamAPI_ISteamUserStats_GetLeaderboardName(
-                self.user_stats,
-                leaderboard.0,
-            ));
+            let name = CStr::from_ptr(
+                steam_api()
+                    .SteamAPI_ISteamUserStats_GetLeaderboardName(self.user_stats, leaderboard.0),
+            );
             name.to_string_lossy().into()
         }
     }
@@ -277,14 +275,15 @@ impl UserStats {
     /// Returns the total number of entries in a leaderboard. Returns 0 if the leaderboard handle is invalid.
     pub fn get_leaderboard_entry_count(&self, leaderboard: &Leaderboard) -> i32 {
         unsafe {
-            sys::SteamAPI_ISteamUserStats_GetLeaderboardEntryCount(self.user_stats, leaderboard.0)
+            steam_api()
+                .SteamAPI_ISteamUserStats_GetLeaderboardEntryCount(self.user_stats, leaderboard.0)
         }
     }
 
     /// Triggers a [`UserStatsReceived`](./struct.UserStatsReceived.html) callback.
     pub fn request_user_stats(&self, steam_user_id: u64) {
         unsafe {
-            sys::SteamAPI_ISteamUserStats_RequestUserStats(self.user_stats, steam_user_id);
+            steam_api().SteamAPI_ISteamUserStats_RequestUserStats(self.user_stats, steam_user_id);
         }
     }
 
@@ -302,8 +301,8 @@ impl UserStats {
         F: FnOnce(Result<GameId, SteamError>) + 'static + Send,
     {
         unsafe {
-            let api_call =
-                sys::SteamAPI_ISteamUserStats_RequestGlobalAchievementPercentages(self.user_stats);
+            let api_call = steam_api()
+                .SteamAPI_ISteamUserStats_RequestGlobalAchievementPercentages(self.user_stats);
             register_call_result::<sys::GlobalAchievementPercentagesReady_t, _>(
                 &self.inner,
                 api_call,
@@ -351,8 +350,8 @@ impl UserStats {
         F: FnOnce(Result<GameId, SteamError>) + 'static + Send,
     {
         unsafe {
-            let api_call =
-                sys::SteamAPI_ISteamUserStats_RequestGlobalStats(self.user_stats, history_days);
+            let api_call = steam_api()
+                .SteamAPI_ISteamUserStats_RequestGlobalStats(self.user_stats, history_days);
             register_call_result::<sys::GlobalStatsReceived_t, _>(
                 &self.inner,
                 api_call,
@@ -386,7 +385,7 @@ impl UserStats {
         let name = CString::new(name).map_err(|_| ())?;
         let mut value: i64 = 0;
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_GetGlobalStatInt64(
+            steam_api().SteamAPI_ISteamUserStats_GetGlobalStatInt64(
                 self.user_stats,
                 name.as_ptr(),
                 &mut value,
@@ -418,7 +417,7 @@ impl UserStats {
         let name = CString::new(name).map_err(|_| ())?;
         let mut value: f64 = 0.0;
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_GetGlobalStatDouble(
+            steam_api().SteamAPI_ISteamUserStats_GetGlobalStatDouble(
                 self.user_stats,
                 name.as_ptr(),
                 &mut value,
@@ -456,7 +455,7 @@ impl UserStats {
         let name = CString::new(name).map_err(|_| ())?;
         let mut data = vec![0i64; max_days];
         let count = unsafe {
-            sys::SteamAPI_ISteamUserStats_GetGlobalStatHistoryInt64(
+            steam_api().SteamAPI_ISteamUserStats_GetGlobalStatHistoryInt64(
                 self.user_stats,
                 name.as_ptr(),
                 data.as_mut_ptr(),
@@ -496,7 +495,7 @@ impl UserStats {
         let name = CString::new(name).map_err(|_| ())?;
         let mut data = vec![0f64; max_days];
         let count = unsafe {
-            sys::SteamAPI_ISteamUserStats_GetGlobalStatHistoryDouble(
+            steam_api().SteamAPI_ISteamUserStats_GetGlobalStatHistoryDouble(
                 self.user_stats,
                 name.as_ptr(),
                 data.as_mut_ptr(),
@@ -520,7 +519,7 @@ impl UserStats {
     /// Requires [`request_current_stats()`](#method.request_current_stats) to have been called
     /// and a successful [`UserStatsReceived`](./struct.UserStatsReceived.html) callback processed.
     pub fn store_stats(&self) -> Result<(), ()> {
-        let success = unsafe { sys::SteamAPI_ISteamUserStats_StoreStats(self.user_stats) };
+        let success = unsafe { steam_api().SteamAPI_ISteamUserStats_StoreStats(self.user_stats) };
         if success {
             Ok(())
         } else {
@@ -531,7 +530,7 @@ impl UserStats {
     /// Resets the current users stats and, optionally achievements.
     pub fn reset_all_stats(&self, achievements_too: bool) -> Result<(), ()> {
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_ResetAllStats(self.user_stats, achievements_too)
+            steam_api().SteamAPI_ISteamUserStats_ResetAllStats(self.user_stats, achievements_too)
         };
         if success {
             Ok(())
@@ -551,7 +550,11 @@ impl UserStats {
 
         let mut value: i32 = 0;
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_GetStatInt32(self.user_stats, name.as_ptr(), &mut value)
+            steam_api().SteamAPI_ISteamUserStats_GetStatInt32(
+                self.user_stats,
+                name.as_ptr(),
+                &mut value,
+            )
         };
         if success {
             Ok(value)
@@ -573,7 +576,7 @@ impl UserStats {
         let name = CString::new(name).unwrap();
 
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_SetStatInt32(self.user_stats, name.as_ptr(), stat)
+            steam_api().SteamAPI_ISteamUserStats_SetStatInt32(self.user_stats, name.as_ptr(), stat)
         };
         if success {
             Ok(())
@@ -593,7 +596,11 @@ impl UserStats {
 
         let mut value: f32 = 0.0;
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_GetStatFloat(self.user_stats, name.as_ptr(), &mut value)
+            steam_api().SteamAPI_ISteamUserStats_GetStatFloat(
+                self.user_stats,
+                name.as_ptr(),
+                &mut value,
+            )
         };
         if success {
             Ok(value)
@@ -615,7 +622,7 @@ impl UserStats {
         let name = CString::new(name).unwrap();
 
         let success = unsafe {
-            sys::SteamAPI_ISteamUserStats_SetStatFloat(self.user_stats, name.as_ptr(), stat)
+            steam_api().SteamAPI_ISteamUserStats_SetStatFloat(self.user_stats, name.as_ptr(), stat)
         };
         if success {
             Ok(())
@@ -646,7 +653,7 @@ impl UserStats {
     /// *Note: Returns an error for AppId `480` (Spacewar)!*
     pub fn get_num_achievements(&self) -> Result<u32, ()> {
         unsafe {
-            let num = sys::SteamAPI_ISteamUserStats_GetNumAchievements(self.user_stats);
+            let num = steam_api().SteamAPI_ISteamUserStats_GetNumAchievements(self.user_stats);
             if num != 0 {
                 Ok(num)
             } else {
@@ -667,7 +674,8 @@ impl UserStats {
 
         for i in 0..num {
             unsafe {
-                let name = sys::SteamAPI_ISteamUserStats_GetAchievementName(self.user_stats, i);
+                let name =
+                    steam_api().SteamAPI_ISteamUserStats_GetAchievementName(self.user_stats, i);
 
                 let c_str = CStr::from_ptr(name).to_string_lossy().into_owned();
 

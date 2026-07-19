@@ -2,6 +2,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::loading::steam_api;
 use crate::networking_sockets::{InnerSocket, NetConnection};
 use crate::networking_types::NetConnectionError::UnhandledType;
 use crate::{Callback, Inner, SteamId, SteamResult};
@@ -1596,7 +1597,7 @@ impl NetworkingConfigEntry {
 
         let mut config = Self::new_uninitialized_config_value();
         unsafe {
-            sys::SteamAPI_SteamNetworkingConfigValue_t_SetInt32(
+            steam_api().SteamAPI_SteamNetworkingConfigValue_t_SetInt32(
                 &mut config,
                 value_type.into(),
                 value,
@@ -1610,7 +1611,7 @@ impl NetworkingConfigEntry {
 
         let mut config = Self::new_uninitialized_config_value();
         unsafe {
-            sys::SteamAPI_SteamNetworkingConfigValue_t_SetInt64(
+            steam_api().SteamAPI_SteamNetworkingConfigValue_t_SetInt64(
                 &mut config,
                 value_type.into(),
                 value,
@@ -1624,7 +1625,7 @@ impl NetworkingConfigEntry {
 
         let mut config = Self::new_uninitialized_config_value();
         unsafe {
-            sys::SteamAPI_SteamNetworkingConfigValue_t_SetFloat(
+            steam_api().SteamAPI_SteamNetworkingConfigValue_t_SetFloat(
                 &mut config,
                 value_type.into(),
                 value,
@@ -1639,7 +1640,7 @@ impl NetworkingConfigEntry {
         let mut config = Self::new_uninitialized_config_value();
         unsafe {
             let c_str = CString::new(value).expect("Rust string could not be converted");
-            sys::SteamAPI_SteamNetworkingConfigValue_t_SetString(
+            steam_api().SteamAPI_SteamNetworkingConfigValue_t_SetString(
                 &mut config,
                 value_type.into(),
                 c_str.as_ptr(),
@@ -1675,7 +1676,7 @@ impl NetworkingIdentity {
                 m_cbSize: 0,
                 __bindgen_anon_1: sys::SteamNetworkingIdentity__bindgen_ty_2 { m_steamID64: 0 },
             };
-            sys::SteamAPI_SteamNetworkingIdentity_Clear(&mut id);
+            steam_api().SteamAPI_SteamNetworkingIdentity_Clear(&mut id);
             Self { inner: id }
         }
     }
@@ -1694,7 +1695,8 @@ impl NetworkingIdentity {
 
     pub fn steam_id(&self) -> Option<SteamId> {
         unsafe {
-            let id = sys::SteamAPI_SteamNetworkingIdentity_GetSteamID64(self.as_ptr() as *mut _);
+            let id =
+                steam_api().SteamAPI_SteamNetworkingIdentity_GetSteamID64(self.as_ptr() as *mut _);
             if id == 0 {
                 None
             } else {
@@ -1708,24 +1710,28 @@ impl NetworkingIdentity {
     }
 
     pub fn is_invalid(&self) -> bool {
-        unsafe { sys::SteamAPI_SteamNetworkingIdentity_IsInvalid(self.as_ptr() as *mut _) }
+        unsafe { steam_api().SteamAPI_SteamNetworkingIdentity_IsInvalid(self.as_ptr() as *mut _) }
     }
 
     pub fn set_steam_id(&mut self, id: SteamId) {
-        unsafe { sys::SteamAPI_SteamNetworkingIdentity_SetSteamID64(self.as_mut_ptr(), id.0) }
+        unsafe {
+            steam_api().SteamAPI_SteamNetworkingIdentity_SetSteamID64(self.as_mut_ptr(), id.0)
+        }
     }
 
     pub fn set_ip_addr(&mut self, addr: SocketAddr) {
         let addr = SteamIpAddr::from(addr);
         unsafe {
-            sys::SteamAPI_SteamNetworkingIdentity_SetIPAddr(self.as_mut_ptr(), addr.as_ptr());
+            steam_api()
+                .SteamAPI_SteamNetworkingIdentity_SetIPAddr(self.as_mut_ptr(), addr.as_ptr());
         }
     }
 
     #[allow(dead_code)]
     pub(crate) fn ip_addr(&self) -> Option<SteamIpAddr> {
         unsafe {
-            let ip = sys::SteamAPI_SteamNetworkingIdentity_GetIPAddr(self.as_ptr() as *mut _);
+            let ip =
+                steam_api().SteamAPI_SteamNetworkingIdentity_GetIPAddr(self.as_ptr() as *mut _);
             if ip.is_null() {
                 None
             } else {
@@ -1735,11 +1741,11 @@ impl NetworkingIdentity {
     }
 
     pub fn set_local_host(&mut self) {
-        unsafe { sys::SteamAPI_SteamNetworkingIdentity_SetLocalHost(self.as_mut_ptr()) }
+        unsafe { steam_api().SteamAPI_SteamNetworkingIdentity_SetLocalHost(self.as_mut_ptr()) }
     }
 
     pub fn is_local_host(&self) -> bool {
-        unsafe { sys::SteamAPI_SteamNetworkingIdentity_IsLocalHost(self.as_ptr() as *mut _) }
+        unsafe { steam_api().SteamAPI_SteamNetworkingIdentity_IsLocalHost(self.as_ptr() as *mut _) }
     }
 
     pub fn debug_string(&self) -> String {
@@ -1748,7 +1754,7 @@ impl NetworkingIdentity {
 
         // let mut buffer = vec![0i8; NETWORK_IDENTITY_STRING_BUFFER_SIZE];
         // let string = unsafe {
-        //     sys::SteamAPI_SteamNetworkingIdentity_ToString(
+        //     steam_api().SteamAPI_SteamNetworkingIdentity_ToString(
         //         self.as_ptr() as *mut sys::SteamNetworkingIdentity,
         //         buffer.as_mut_ptr(),
         //         NETWORK_IDENTITY_STRING_BUFFER_SIZE as u32,
@@ -1786,7 +1792,8 @@ impl NetworkingIdentity {
 
     pub fn is_equal_to(&self, other: &Self) -> bool {
         unsafe {
-            sys::SteamAPI_SteamNetworkingIdentity_IsEqualTo(self.as_ptr() as *mut _, other.as_ptr())
+            steam_api()
+                .SteamAPI_SteamNetworkingIdentity_IsEqualTo(self.as_ptr() as *mut _, other.as_ptr())
         }
     }
 
@@ -2016,7 +2023,7 @@ extern "C" fn free_rust_message_buffer(message: *mut sys::SteamNetworkingMessage
 impl Drop for NetworkingMessage {
     fn drop(&mut self) {
         if !self.message.is_null() {
-            unsafe { sys::SteamAPI_SteamNetworkingMessage_t_Release(self.message) }
+            unsafe { steam_api().SteamAPI_SteamNetworkingMessage_t_Release(self.message) }
         }
     }
 }
@@ -2051,7 +2058,7 @@ impl SteamIpAddr {
                 },
                 m_port: 0,
             };
-            sys::SteamAPI_SteamNetworkingIPAddr_Clear(&mut ip);
+            steam_api().SteamAPI_SteamNetworkingIPAddr_Clear(&mut ip);
             Self { inner: ip }
         }
     }
@@ -2073,7 +2080,7 @@ impl SteamIpAddr {
 
     pub fn set_ipv4(&mut self, ip: SocketAddrV4) {
         unsafe {
-            sys::SteamAPI_SteamNetworkingIPAddr_SetIPv4(
+            steam_api().SteamAPI_SteamNetworkingIPAddr_SetIPv4(
                 &mut self.inner,
                 (*ip.ip()).into(),
                 ip.port(),
@@ -2083,7 +2090,7 @@ impl SteamIpAddr {
 
     pub fn set_ipv6(&mut self, ip: SocketAddrV6) {
         unsafe {
-            sys::SteamAPI_SteamNetworkingIPAddr_SetIPv6(
+            steam_api().SteamAPI_SteamNetworkingIPAddr_SetIPv6(
                 &mut self.inner,
                 ip.ip().octets().as_ptr(),
                 ip.port(),
@@ -2092,7 +2099,8 @@ impl SteamIpAddr {
     }
 
     pub fn get_ipv4(&self) -> Option<Ipv4Addr> {
-        let ip = unsafe { sys::SteamAPI_SteamNetworkingIPAddr_GetIPv4(self.as_ptr() as *mut _) };
+        let ip =
+            unsafe { steam_api().SteamAPI_SteamNetworkingIPAddr_GetIPv4(self.as_ptr() as *mut _) };
         if ip == 0 {
             None
         } else {
@@ -2101,7 +2109,7 @@ impl SteamIpAddr {
     }
 
     pub fn is_ipv4(&self) -> bool {
-        unsafe { sys::SteamAPI_SteamNetworkingIPAddr_IsIPv4(self.as_ptr() as *mut _) }
+        unsafe { steam_api().SteamAPI_SteamNetworkingIPAddr_IsIPv4(self.as_ptr() as *mut _) }
     }
 
     pub fn as_ptr(&self) -> *const sys::SteamNetworkingIPAddr {
@@ -2118,7 +2126,7 @@ impl SteamIpAddr {
         // let mut buffer = vec![0; sys::SteamNetworkingIPAddr_k_cchMaxString as usize];
         // let c_str;
         // unsafe {
-        //     sys::SteamAPI_SteamNetworkingIPAddr_ToString(
+        //     steam_api().SteamAPI_SteamNetworkingIPAddr_ToString(
         //         &self.inner as *const _ as *mut _,
         //         buffer.as_mut_ptr(),
         //         buffer.len() as _,
@@ -2175,7 +2183,8 @@ impl Default for SteamIpAddr {
 impl PartialEq for SteamIpAddr {
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            sys::SteamAPI_SteamNetworkingIPAddr_IsEqualTo(self.as_ptr() as *mut _, &other.inner)
+            steam_api()
+                .SteamAPI_SteamNetworkingIPAddr_IsEqualTo(self.as_ptr() as *mut _, &other.inner)
         }
     }
 }

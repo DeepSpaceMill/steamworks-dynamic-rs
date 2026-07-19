@@ -12,17 +12,17 @@ pub struct User {
 impl User {
     /// Returns the steam id of the current user
     pub fn steam_id(&self) -> SteamId {
-        unsafe { SteamId(sys::SteamAPI_ISteamUser_GetSteamID(self.user)) }
+        unsafe { SteamId(steam_api().SteamAPI_ISteamUser_GetSteamID(self.user)) }
     }
 
     /// Returns the level of the current user
     pub fn level(&self) -> u32 {
-        unsafe { sys::SteamAPI_ISteamUser_GetPlayerSteamLevel(self.user) as u32 }
+        unsafe { steam_api().SteamAPI_ISteamUser_GetPlayerSteamLevel(self.user) as u32 }
     }
 
     /// Returns whether the current user's Steam client is connected to the Steam servers.
     pub fn logged_on(&self) -> bool {
-        unsafe { sys::SteamAPI_ISteamUser_BLoggedOn(self.user) }
+        unsafe { steam_api().SteamAPI_ISteamUser_BLoggedOn(self.user) }
     }
 
     /// Retrieve an authentication session ticket that can be sent
@@ -49,7 +49,7 @@ impl User {
         unsafe {
             let mut ticket = vec![0; 1024];
             let mut ticket_len = 0;
-            let auth_ticket = sys::SteamAPI_ISteamUser_GetAuthSessionTicket(
+            let auth_ticket = steam_api().SteamAPI_ISteamUser_GetAuthSessionTicket(
                 self.user,
                 ticket.as_mut_ptr().cast(),
                 1024,
@@ -68,7 +68,7 @@ impl User {
     /// the specified entity.
     pub fn cancel_authentication_ticket(&self, ticket: AuthTicket) {
         unsafe {
-            sys::SteamAPI_ISteamUser_CancelAuthTicket(self.user, ticket.0);
+            steam_api().SteamAPI_ISteamUser_CancelAuthTicket(self.user, ticket.0);
         }
     }
 
@@ -86,7 +86,7 @@ impl User {
         ticket: &[u8],
     ) -> Result<(), AuthSessionError> {
         unsafe {
-            let res = sys::SteamAPI_ISteamUser_BeginAuthSession(
+            let res = steam_api().SteamAPI_ISteamUser_BeginAuthSession(
                 self.user,
                 ticket.as_ptr().cast(),
                 ticket.len() as _,
@@ -121,7 +121,7 @@ impl User {
     /// the specified entity.
     pub fn end_authentication_session(&self, user: SteamId) {
         unsafe {
-            sys::SteamAPI_ISteamUser_EndAuthSession(self.user, user.0);
+            steam_api().SteamAPI_ISteamUser_EndAuthSession(self.user, user.0);
         }
     }
 
@@ -143,7 +143,7 @@ impl User {
         unsafe {
             let c_str = CString::new(identity).unwrap();
             let auth_ticket =
-                sys::SteamAPI_ISteamUser_GetAuthTicketForWebApi(self.user, c_str.as_ptr());
+                steam_api().SteamAPI_ISteamUser_GetAuthTicketForWebApi(self.user, c_str.as_ptr());
 
             AuthTicket(auth_ticket)
         }
@@ -156,7 +156,7 @@ impl User {
     pub fn user_has_license_for_app(&self, user: SteamId, app_id: AppId) -> UserHasLicense {
         unsafe {
             let license_response =
-                sys::SteamAPI_ISteamUser_UserHasLicenseForApp(self.user, user.0, app_id.0);
+                steam_api().SteamAPI_ISteamUser_UserHasLicenseForApp(self.user, user.0, app_id.0);
 
             match license_response {
                 sys::EUserHasLicenseForAppResult::k_EUserHasLicenseResultHasLicense => {
