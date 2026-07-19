@@ -27,6 +27,10 @@ static STEAMAPI: LazyLock<Option<SteamAPI>> = LazyLock::new(|| {
     api
 });
 
+pub fn steam_api_exists() -> bool {
+    STEAMAPI.is_some()
+}
+
 pub fn steam_api() -> &'static SteamAPI {
     STEAMAPI.as_ref().unwrap()
 }
