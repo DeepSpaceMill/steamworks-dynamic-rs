@@ -5,6 +5,11 @@
 
 This crate provides Rust bindings to the [Steamworks SDK](https://partner.steamgames.com/doc/sdk).
 
+## Fork notes
+
+This project is forked from [Noxime/steamworks-rs](https://github.com/Noxime/steamworks-rs).
+Unlike the upstream version used as the fork base, which links the Steam API DLL, SO, or dylib directly, this fork loads the library dynamically with `libloading`. This allows applications to check whether the Steam API library is available before initializing Steamworks.
+
 ## Usage
 Add the following to your `Cargo.toml`:
 
@@ -25,12 +30,14 @@ steamworks = "0.13.0"
 ## Example
 You can find more examples in [examples](examples/).
 ```rust
-use steamworks::AppId;
-use steamworks::Client;
-use steamworks::FriendFlags;
-use steamworks::PersonaStateChange;
+use steamworks::{steam_api_exists, AppId, Client, FriendFlags, PersonaStateChange};
 
 fn main() {
+    if !steam_api_exists() {
+        eprintln!("Failed to load the Steam API dynamic library.");
+        return;
+    }
+
     let client = Client::init().unwrap();
 
     let _cb = client.register_callback(|p: PersonaStateChange| {
@@ -75,6 +82,3 @@ fn main() {
 ## License
 This crate is dual-licensed under [Apache](./LICENSE-APACHE) and
 [MIT](./LICENSE-MIT), except for the files in [`steamworks-sys/lib/steam/`]
-
-## Help, I can't run my game!
-If you are seeing errors like `STATUS_DLL_NOT_FOUND`, `Image not found` etc. You are likely missing the Steamworks SDK Redistributable files. Steamworks-rs loads the SDK dynamically, so the libraries need to exist somewhere the operating system can find them. This is likely next to your game binary (.exe on windows). You can find the required files in the SDK release ZIP, under `lib\steam\redistributable_bin`. See #63 for further details
