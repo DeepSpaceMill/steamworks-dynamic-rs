@@ -32,6 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: >
+          sudo apt-get update &&
+          sudo apt-get install --no-install-recommends -y
+          libudev-dev libx11-dev libxi-dev libgl1-mesa-dev libasound2-dev
+          libxcb-shape0-dev libxcb-xfixes0-dev
+
       - name: Build library
         run: cargo build --lib
 
