@@ -1,6 +1,3 @@
-#[cfg(feature = "rebuild-bindings")]
-extern crate bindgen;
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     use std::env;
     use std::path::{Path, PathBuf};
