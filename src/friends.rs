@@ -125,23 +125,25 @@ impl Friends {
         }
     }
 
-    pub fn activate_game_overlay(&self, dialog: &str) {
-        let dialog = CString::new(dialog).unwrap();
+    pub fn activate_game_overlay(&self, dialog: &str) -> Result<(), std::ffi::NulError> {
+        let dialog = CString::new(dialog)?;
         unsafe {
             steam_api().SteamAPI_ISteamFriends_ActivateGameOverlay(self.friends, dialog.as_ptr());
         }
+        Ok(())
     }
 
     // I don't know why these are part of friends either
-    pub fn activate_game_overlay_to_web_page(&self, url: &str) {
+    pub fn activate_game_overlay_to_web_page(&self, url: &str) -> Result<(), std::ffi::NulError> {
+        let url = CString::new(url)?;
         unsafe {
-            let url = CString::new(url).unwrap();
             steam_api().SteamAPI_ISteamFriends_ActivateGameOverlayToWebPage(
                 self.friends,
                 url.as_ptr(),
                 sys::EActivateGameOverlayToWebPageMode::k_EActivateGameOverlayToWebPageMode_Default,
             );
         }
+        Ok(())
     }
 
     pub fn activate_game_overlay_to_store(
