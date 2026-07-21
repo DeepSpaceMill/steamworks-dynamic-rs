@@ -18,6 +18,13 @@ pub struct Apps {
     pub(crate) _inner: Arc<Inner>,
 }
 
+/// Download progress for an installed DLC.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DlcDownloadProgress {
+    pub downloaded_bytes: u64,
+    pub total_bytes: u64,
+}
+
 impl Apps {
     /// Returns whether the user currently has the app with the given
     /// ID currently installed.
@@ -31,6 +38,37 @@ impl Apps {
     /// installed.
     pub fn is_dlc_installed(&self, app_id: AppId) -> bool {
         unsafe { steam_api().SteamAPI_ISteamApps_BIsDlcInstalled(self.apps, app_id.0) }
+    }
+
+    /// Returns the current download progress for a DLC.
+    ///
+    /// Returns `None` when there is no download in progress.
+    pub fn dlc_download_progress(&self, app_id: AppId) -> Option<DlcDownloadProgress> {
+        let mut downloaded_bytes = 0;
+        let mut total_bytes = 0;
+        unsafe {
+            steam_api()
+                .SteamAPI_ISteamApps_GetDlcDownloadProgress(
+                    self.apps,
+                    app_id.0,
+                    &mut downloaded_bytes,
+                    &mut total_bytes,
+                )
+                .then_some(DlcDownloadProgress {
+                    downloaded_bytes,
+                    total_bytes,
+                })
+        }
+    }
+
+    /// Starts installing the specified DLC.
+    pub fn install_dlc(&self, app_id: AppId) {
+        unsafe { steam_api().SteamAPI_ISteamApps_InstallDLC(self.apps, app_id.0) }
+    }
+
+    /// Uninstalls the specified DLC.
+    pub fn uninstall_dlc(&self, app_id: AppId) {
+        unsafe { steam_api().SteamAPI_ISteamApps_UninstallDLC(self.apps, app_id.0) }
     }
 
     /// Returns whether the user is subscribed to the app with the given
