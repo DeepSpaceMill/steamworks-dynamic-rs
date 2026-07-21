@@ -147,6 +147,11 @@ impl Utils {
         unsafe { steam_api().SteamAPI_ISteamUtils_IsOverlayEnabled(self.utils) }
     }
 
+    /// Returns whether the overlay needs the game to present a frame.
+    pub fn overlay_needs_present(&self) -> bool {
+        unsafe { steam_api().SteamAPI_ISteamUtils_BOverlayNeedsPresent(self.utils) }
+    }
+
     /// Returns the language the steam client is currently
     /// running in.
     ///

@@ -527,6 +527,29 @@ impl UserStats {
         }
     }
 
+    /// Displays achievement progress in the Steam overlay.
+    pub fn indicate_achievement_progress(
+        &self,
+        name: &str,
+        current: u32,
+        max: u32,
+    ) -> Result<(), SteamError> {
+        let name = CString::new(name).map_err(|_| SteamError::InvalidParameter)?;
+        let success = unsafe {
+            steam_api().SteamAPI_ISteamUserStats_IndicateAchievementProgress(
+                self.user_stats,
+                name.as_ptr(),
+                current,
+                max,
+            )
+        };
+        if success {
+            Ok(())
+        } else {
+            Err(SteamError::IOFailure)
+        }
+    }
+
     /// Resets the current users stats and, optionally achievements.
     pub fn reset_all_stats(&self, achievements_too: bool) -> Result<(), ()> {
         let success = unsafe {
@@ -667,9 +690,7 @@ impl UserStats {
     /// Returns an empty string for an achievement name if `iAchievement` is not a valid index,
     /// and the current AppId must have achievements.
     pub fn get_achievement_names(&self) -> Option<Vec<String>> {
-        let num = self
-            .get_num_achievements()
-            .expect("Failed to get number of achievements");
+        let num = self.get_num_achievements().ok()?;
         let mut names = Vec::new();
 
         for i in 0..num {

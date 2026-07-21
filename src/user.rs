@@ -20,6 +20,11 @@ impl User {
         unsafe { steam_api().SteamAPI_ISteamUser_GetPlayerSteamLevel(self.user) as u32 }
     }
 
+    /// Returns the level of the user's game badge for the current app.
+    pub fn game_badge_level(&self, series: i32, foil: bool) -> i32 {
+        unsafe { steam_api().SteamAPI_ISteamUser_GetGameBadgeLevel(self.user, series, foil) }
+    }
+
     /// Returns whether the current user's Steam client is connected to the Steam servers.
     pub fn logged_on(&self) -> bool {
         unsafe { steam_api().SteamAPI_ISteamUser_BLoggedOn(self.user) }
