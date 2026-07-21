@@ -698,6 +698,10 @@ impl UserStats {
                 let name =
                     steam_api().SteamAPI_ISteamUserStats_GetAchievementName(self.user_stats, i);
 
+                if name.is_null() {
+                    return None;
+                }
+
                 let c_str = CStr::from_ptr(name).to_string_lossy().into_owned();
 
                 names.push(c_str);
