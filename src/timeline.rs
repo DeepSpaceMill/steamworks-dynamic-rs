@@ -73,32 +73,40 @@ impl Timeline {
     /// Sets a description for the current game state in the timeline.
     /// These help the user to find specific moments in the timeline when saving clips.
     /// Setting a new state description replaces any previous description.
-    pub fn set_timeline_state_description(&self, description: &str, duration: Duration) {
+    pub fn set_timeline_state_description(
+        &self,
+        description: &str,
+        duration: Duration,
+    ) -> Result<(), SteamError> {
         if self.disabled {
-            return;
+            return Err(SteamError::InvalidState);
         }
 
-        let description = CString::new(description).unwrap();
+        let description = CString::new(description).map_err(|_| SteamError::InvalidParameter)?;
 
         unsafe {
             steam_api().SteamAPI_ISteamTimeline_SetTimelineTooltip(
                 self.timeline,
                 description.as_ptr(),
                 duration.as_secs_f32(),
-            )
+            );
         }
+        Ok(())
     }
 
     /// Clears the previous set game state in the timeline.
-    pub fn clear_timeline_state_description(&self, duration: Duration) {
+    pub fn clear_timeline_state_description(&self, duration: Duration) -> Result<(), SteamError> {
         if self.disabled {
-            return;
+            return Err(SteamError::InvalidState);
         }
 
         unsafe {
-            steam_api()
-                .SteamAPI_ISteamTimeline_ClearTimelineTooltip(self.timeline, duration.as_secs_f32())
+            steam_api().SteamAPI_ISteamTimeline_ClearTimelineTooltip(
+                self.timeline,
+                duration.as_secs_f32(),
+            );
         }
+        Ok(())
     }
 
     /// Use this to mark an event on the Timeline.
@@ -113,27 +121,28 @@ impl Timeline {
         start_offset_seconds: f32,
         duration: Duration,
         clip_priority: TimelineEventClipPriority,
-    ) {
+    ) -> Result<(), SteamError> {
         if self.disabled {
-            return;
+            return Err(SteamError::InvalidState);
         }
 
-        let icon = CString::new(icon).unwrap();
-        let title = CString::new(title).unwrap();
-        let description = CString::new(description).unwrap();
+        let icon = CString::new(icon).map_err(|_| SteamError::InvalidParameter)?;
+        let title = CString::new(title).map_err(|_| SteamError::InvalidParameter)?;
+        let description = CString::new(description).map_err(|_| SteamError::InvalidParameter)?;
         let duration = duration.as_secs_f32();
 
         unsafe {
             let _handle = steam_api().SteamAPI_ISteamTimeline_AddRangeTimelineEvent(
                 self.timeline,
-                icon.as_ptr(),
                 title.as_ptr(),
                 description.as_ptr(),
+                icon.as_ptr(),
                 priority,
                 start_offset_seconds,
                 duration,
                 clip_priority.into(),
             );
         }
+        Ok(())
     }
 }
