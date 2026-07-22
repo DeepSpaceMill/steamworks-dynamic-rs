@@ -36,6 +36,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .raw_line(
             "pub const k_SteamItemInstanceIDInvalid: SteamItemInstanceID_t = SteamItemInstanceID_t::MAX;",
         )
+        // bindgen 0.72.0+ has a bug that causes it to generate invalid code for some of the Steam API types.
+        // See https://github.com/rust-lang/rust-bindgen/issues/380#issuecomment-2655035849
+        .opaque_type("^(ISteamParties|ISteamUGC|ISteamTimeline|ISteamVideo|ISteamInventory)$")
         .default_enum_style(bindgen::EnumVariation::Rust {
             non_exhaustive: true,
         })
