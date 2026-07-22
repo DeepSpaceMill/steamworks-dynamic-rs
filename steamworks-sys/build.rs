@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .clang_arg("-std=c++11")
         .clang_arg(format!("-I{}", sdk_loc.join("public").display()))
         .allowlist_function("Steam.*")
-        .allowlist_var(".*") // TODO: Prune constants
+        .allowlist_var("^(k.*|STEAM.*|Steam.*|MASTERSERVER.*|INVALID_.*)$")
         .allowlist_type(".*") // TODO: Prune types
         .blocklist_item("^(__security_cookie|k_SteamItemInstanceIDInvalid)$")
         .raw_line(
