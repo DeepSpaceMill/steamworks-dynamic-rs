@@ -32,6 +32,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .allowlist_function("Steam.*")
         .allowlist_var(".*") // TODO: Prune constants
         .allowlist_type(".*") // TODO: Prune types
+        .blocklist_item("^(__security_cookie|k_SteamItemInstanceIDInvalid)$")
+        .raw_line(
+            "pub const k_SteamItemInstanceIDInvalid: SteamItemInstanceID_t = SteamItemInstanceID_t::MAX;",
+        )
         .default_enum_style(bindgen::EnumVariation::Rust {
             non_exhaustive: true,
         })
